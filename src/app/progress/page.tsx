@@ -3,6 +3,8 @@ import ProgressBoard from "@/components/ProgressBoard";
 import { readData } from "@/lib/store";
 import type { ProgressTask } from "@/lib/types";
 
+export const dynamic = "force-dynamic";
+
 export default async function ProgressPage() {
   const tasks = await readData<ProgressTask[]>("progress");
 

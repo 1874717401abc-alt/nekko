@@ -3,6 +3,8 @@ import CheckInBoard from "@/components/CheckInBoard";
 import { readData } from "@/lib/store";
 import type { CheckIn, TeamMember } from "@/lib/types";
 
+export const dynamic = "force-dynamic";
+
 export default async function CheckInPage() {
   const [members, checkins] = await Promise.all([
     readData<TeamMember[]>("team"),

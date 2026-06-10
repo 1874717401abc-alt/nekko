@@ -3,6 +3,8 @@ import { HoverCard, StaggerContainer, StaggerItem } from "@/components/motion";
 import { readData } from "@/lib/store";
 import type { TeamMember } from "@/lib/types";
 
+export const dynamic = "force-dynamic";
+
 export default async function TeamPage() {
   const members = await readData<TeamMember[]>("team");
 

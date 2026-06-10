@@ -3,6 +3,8 @@ import InspirationBoard from "@/components/InspirationBoard";
 import { readData } from "@/lib/store";
 import type { InspirationItem } from "@/lib/types";
 
+export const dynamic = "force-dynamic";
+
 export default async function InspirationPage() {
   const items = await readData<InspirationItem[]>("inspiration");
 

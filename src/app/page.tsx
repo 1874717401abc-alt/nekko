@@ -5,6 +5,8 @@ import { FadeIn, HoverCard, StaggerContainer, StaggerItem } from "@/components/m
 import { readData } from "@/lib/store";
 import type { CheckIn, InspirationItem, LibraryItem, ProgressTask, TeamMember } from "@/lib/types";
 
+export const dynamic = "force-dynamic";
+
 const statusLabel: Record<ProgressTask["status"], string> = {
   todo: "待开始",
   doing: "进行中",

@@ -3,6 +3,8 @@ import LibraryList from "@/components/LibraryList";
 import { readData } from "@/lib/store";
 import type { LibraryItem } from "@/lib/types";
 
+export const dynamic = "force-dynamic";
+
 export default async function LibraryPage() {
   const items = await readData<LibraryItem[]>("library");
 
