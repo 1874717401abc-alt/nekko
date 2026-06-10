@@ -1,0 +1,42 @@
+[
+  {
+    "id": "task-1",
+    "title": "Ep.12 脚本定稿",
+    "description": "确认开场钩子和结尾CTA文案",
+    "status": "done",
+    "assignee": "A",
+    "createdAt": "2026-06-01T09:00:00.000Z"
+  },
+  {
+    "id": "task-2",
+    "title": "Ep.12 拍摄",
+    "description": "外景两小时 + 棚内补拍",
+    "status": "done",
+    "assignee": "B",
+    "createdAt": "2026-06-03T09:00:00.000Z"
+  },
+  {
+    "id": "task-3",
+    "title": "Ep.12 粗剪",
+    "description": "先出一版8分钟以内的粗剪",
+    "status": "todo",
+    "assignee": "A",
+    "createdAt": "2026-06-06T09:00:00.000Z"
+  },
+  {
+    "id": "task-4",
+    "title": "封面图设计",
+    "description": "三套方案，欧美风对比色",
+    "status": "todo",
+    "assignee": "B",
+    "createdAt": "2026-06-07T09:00:00.000Z"
+  },
+  {
+    "id": "task-5",
+    "title": "Ep.13 选题调研",
+    "description": "收集竞品数据，列3个候选方向",
+    "status": "doing",
+    "assignee": "A",
+    "createdAt": "2026-06-09T09:00:00.000Z"
+  }
+]

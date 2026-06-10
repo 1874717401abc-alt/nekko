@@ -1,0 +1,29 @@
+[
+  {
+    "id": "lib-1",
+    "title": "6月选题策划文档",
+    "type": "doc",
+    "url": "https://docs.google.com/",
+    "category": "策划",
+    "note": "本月四条主线选题与排期",
+    "addedAt": "2026-06-02T09:00:00.000Z"
+  },
+  {
+    "id": "lib-2",
+    "title": "Ep.12 成片初剪",
+    "type": "video",
+    "url": "https://drive.google.com/",
+    "category": "成片",
+    "note": "等待二审反馈",
+    "addedAt": "2026-06-08T16:40:00.000Z"
+  },
+  {
+    "id": "lib-3",
+    "title": "品牌素材包 v2",
+    "type": "doc",
+    "url": "https://drive.google.com/",
+    "category": "素材",
+    "note": "Logo / 字体 / 调色LUT",
+    "addedAt": "2026-06-04T11:15:00.000Z"
+  }
+]
