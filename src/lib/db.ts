@@ -43,6 +43,9 @@ export function getDb(): Database.Database {
   if (!userColumns.includes("contact")) {
     db.exec("ALTER TABLE users ADD COLUMN contact TEXT NOT NULL DEFAULT ''");
   }
+  if (!userColumns.includes("is_admin")) {
+    db.exec("ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0");
+  }
 
   seedFromJsonFiles(db);
   migrateLegacyData(db);

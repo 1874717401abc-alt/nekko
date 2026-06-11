@@ -83,7 +83,7 @@ function PlayPauseIcon({ playing }: { playing: boolean }) {
   );
 }
 
-export default function HomeHero() {
+export default function HomeHero({ heroImages }: { heroImages?: string[] }) {
   const [active, setActive] = useState(0);
   const [playing, setPlaying] = useState(true);
 
@@ -96,6 +96,7 @@ export default function HomeHero() {
   }, [playing]);
 
   const slide = slides[active];
+  const bgSrc = heroImages?.[active] || slide.bg;
 
   function go(delta: 1 | -1) {
     setActive((a) => (a + delta + slides.length) % slides.length);
@@ -169,14 +170,14 @@ export default function HomeHero() {
             <div className="pt-[56.25%]" />
             <AnimatePresence mode="sync">
               <motion.div
-                key={slide.bg}
+                key={bgSrc}
                 initial={{ opacity: 0, scale: 1.04 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 1, ease: easeOut }}
                 className="absolute inset-0"
               >
-                <Image src={slide.bg} alt="" fill className="object-cover" sizes="(min-width: 1024px) 700px, 100vw" priority />
+                <Image src={bgSrc} alt="" fill className="object-cover" sizes="(min-width: 1024px) 700px, 100vw" priority />
                 <div className="absolute inset-0 bg-gradient-to-t from-paper/90 via-paper/15 to-transparent" />
               </motion.div>
             </AnimatePresence>

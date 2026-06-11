@@ -12,10 +12,19 @@ type UserRow = {
   focus: string;
   avatar_url: string;
   contact: string;
+  is_admin: number;
   created_at: string;
 };
 
-function toUser(row: UserRow): User {
+function getOwnerId(db: ReturnType<typeof getDb>): string | null {
+  const row = db
+    .prepare("SELECT id FROM users ORDER BY created_at ASC, rowid ASC LIMIT 1")
+    .get() as { id: string } | undefined;
+  return row?.id ?? null;
+}
+
+function toUser(row: UserRow, ownerId: string | null): User {
+  const isOwner = row.id === ownerId;
   return {
     id: row.id,
     username: row.username,
@@ -26,6 +35,8 @@ function toUser(row: UserRow): User {
     avatarUrl: row.avatar_url || "",
     contact: row.contact || "",
     createdAt: row.created_at,
+    isAdmin: !!row.is_admin || isOwner,
+    isOwner,
   };
 }
 
@@ -35,14 +46,14 @@ export function getUserByUsername(username: string): (User & { passwordHash: str
     .prepare("SELECT * FROM users WHERE username = ?")
     .get(username) as UserRow | undefined;
   if (!row) return null;
-  return { ...toUser(row), passwordHash: row.password_hash };
+  return { ...toUser(row, getOwnerId(db)), passwordHash: row.password_hash };
 }
 
 export function getUserById(id: string): User | null {
   const db = getDb();
   const row = db.prepare("SELECT * FROM users WHERE id = ?").get(id) as UserRow | undefined;
   if (!row) return null;
-  return toUser(row);
+  return toUser(row, getOwnerId(db));
 }
 
 export function createUser(input: {
@@ -57,6 +68,7 @@ export function createUser(input: {
     `INSERT INTO users (id, username, password_hash, display_name, role, bio, focus, created_at)
      VALUES (?, ?, ?, ?, '', '', '[]', ?)`
   ).run(id, input.username, input.passwordHash, input.displayName, createdAt);
+  const isOwner = getOwnerId(db) === id;
   return {
     id,
     username: input.username,
@@ -67,6 +79,8 @@ export function createUser(input: {
     avatarUrl: "",
     contact: "",
     createdAt,
+    isAdmin: isOwner,
+    isOwner,
   };
 }
 
@@ -112,5 +126,12 @@ export function updateUserAvatar(id: string, avatarUrl: string): User | null {
 export function listUsers(): User[] {
   const db = getDb();
   const rows = db.prepare("SELECT * FROM users ORDER BY created_at ASC").all() as UserRow[];
-  return rows.map(toUser);
+  const ownerId = getOwnerId(db);
+  return rows.map((row) => toUser(row, ownerId));
+}
+
+export function setUserAdmin(id: string, isAdmin: boolean): User | null {
+  const db = getDb();
+  db.prepare("UPDATE users SET is_admin = ? WHERE id = ?").run(isAdmin ? 1 : 0, id);
+  return getUserById(id);
 }

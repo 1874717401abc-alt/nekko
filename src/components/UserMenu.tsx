@@ -65,6 +65,15 @@ export default function UserMenu({ className = "" }: { className?: string }) {
           >
             我的资料
           </Link>
+          {user.isAdmin && (
+            <Link
+              href="/admin"
+              onClick={() => setOpen(false)}
+              className="block text-sm text-ink-soft hover:text-accent transition-colors px-1 py-1.5"
+            >
+              控制台
+            </Link>
+          )}
           <button
             onClick={handleSignOut}
             className="block w-full text-left text-sm text-ink-soft hover:text-accent transition-colors px-1 py-1.5"

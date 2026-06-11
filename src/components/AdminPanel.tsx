@@ -1,0 +1,224 @@
+"use client";
+
+import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import Avatar from "@/components/Avatar";
+import type { User } from "@/lib/types";
+
+const SLIDE_LABELS = ["轮播图 1（主图）", "轮播图 2", "轮播图 3"];
+const MAX_BYTES = 5 * 1024 * 1024;
+
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+export default function AdminPanel({
+  currentUser,
+  users,
+  heroImages,
+}: {
+  currentUser: User;
+  users: User[];
+  heroImages: string[];
+}) {
+  const router = useRouter();
+  const [memberError, setMemberError] = useState<string | null>(null);
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  const [images, setImages] = useState<string[]>([
+    heroImages[0] || "",
+    heroImages[1] || "",
+    heroImages[2] || "",
+  ]);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadingSlot, setUploadingSlot] = useState<number | null>(null);
+  const fileInputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
+
+  async function toggleAdmin(userId: string, makeAdmin: boolean) {
+    setMemberError(null);
+    setPendingId(userId);
+    try {
+      const res = await fetch(`/api/admin/users/${userId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isAdmin: makeAdmin }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        setMemberError(data?.error ?? "操作失败，请重试。");
+        return;
+      }
+      router.refresh();
+    } catch {
+      setMemberError("操作失败，请重试。");
+    } finally {
+      setPendingId(null);
+    }
+  }
+
+  async function handleHeroFileChange(slot: number, e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadError(null);
+
+    if (file.size > MAX_BYTES) {
+      setUploadError("图片太大了（最大 5MB）。");
+      if (fileInputRefs[slot].current) fileInputRefs[slot].current!.value = "";
+      return;
+    }
+
+    setUploadingSlot(slot);
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      const res = await fetch("/api/admin/hero", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slot, image: dataUrl }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        setUploadError(data?.error ?? "上传失败，请重试。");
+        return;
+      }
+      const updated = await res.json();
+      setImages(updated);
+      router.refresh();
+    } catch {
+      setUploadError("上传失败，请重试。");
+    } finally {
+      setUploadingSlot(null);
+      if (fileInputRefs[slot].current) fileInputRefs[slot].current!.value = "";
+    }
+  }
+
+  async function handleHeroReset(slot: number) {
+    setUploadError(null);
+    setUploadingSlot(slot);
+    try {
+      const res = await fetch("/api/admin/hero", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slot, image: null }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        setUploadError(data?.error ?? "操作失败，请重试。");
+        return;
+      }
+      const updated = await res.json();
+      setImages(updated);
+      router.refresh();
+    } catch {
+      setUploadError("操作失败，请重试。");
+    } finally {
+      setUploadingSlot(null);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-10">
+      <section className="rounded-2xl border border-line/70 bg-card p-6 sm:p-8">
+        <h2 className="text-sm font-medium text-ink mb-1">成员管理</h2>
+        <p className="text-xs text-ink-soft mb-5">
+          {currentUser.isOwner
+            ? "你是网站所有者，可以授予或撤销其他成员的控制台权限。"
+            : "你拥有控制台权限，可以查看所有成员。"}
+        </p>
+        {memberError && <p className="text-xs text-red-400 mb-3">{memberError}</p>}
+        <div className="flex flex-col gap-3">
+          {users.map((u) => (
+            <div
+              key={u.id}
+              className="flex items-center justify-between gap-4 px-1 py-2.5 border-b border-line/70 last:border-b-0"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <Avatar src={u.avatarUrl || undefined} name={u.displayName} size={36} />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-ink truncate">
+                    {u.displayName}
+                    {u.isOwner && (
+                      <span className="ml-2 text-[10px] uppercase tracking-[0.2em] text-accent align-middle">
+                        所有者
+                      </span>
+                    )}
+                    {!u.isOwner && u.isAdmin && (
+                      <span className="ml-2 text-[10px] uppercase tracking-[0.2em] text-ink-soft align-middle">
+                        管理员
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-xs text-ink-soft truncate">@{u.username}</p>
+                </div>
+              </div>
+              {currentUser.isOwner && !u.isOwner && (
+                <button
+                  onClick={() => toggleAdmin(u.id, !u.isAdmin)}
+                  disabled={pendingId === u.id}
+                  className="text-xs px-3.5 py-1.5 rounded-full border border-line text-ink-soft hover:text-accent hover:border-accent transition-colors disabled:opacity-50 shrink-0"
+                >
+                  {pendingId === u.id ? "处理中…" : u.isAdmin ? "撤销管理员" : "设为管理员"}
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-line/70 bg-card p-6 sm:p-8">
+        <h2 className="text-sm font-medium text-ink mb-1">首页轮播图</h2>
+        <p className="text-xs text-ink-soft mb-5">
+          上传图片替换首页主轮播的背景图，建议使用横向图片（约 16:9）。
+        </p>
+        {uploadError && <p className="text-xs text-red-400 mb-3">{uploadError}</p>}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {SLIDE_LABELS.map((label, i) => (
+            <div key={i} className="flex flex-col gap-2">
+              <p className="text-xs uppercase tracking-[0.2em] text-ink-soft">{label}</p>
+              <div className="relative aspect-video rounded-lg overflow-hidden border border-line bg-paper-soft">
+                {images[i] ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={images[i]} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center text-xs text-ink-soft">
+                    默认图片
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => fileInputRefs[i].current?.click()}
+                  disabled={uploadingSlot === i}
+                  className="flex-1 text-xs px-3 py-2 rounded-full border border-line text-ink-soft hover:text-accent hover:border-accent transition-colors disabled:opacity-50"
+                >
+                  {uploadingSlot === i ? "上传中…" : "上传图片"}
+                </button>
+                {images[i] && (
+                  <button
+                    type="button"
+                    onClick={() => handleHeroReset(i)}
+                    disabled={uploadingSlot === i}
+                    className="text-xs px-3 py-2 rounded-full border border-line text-ink-soft hover:text-accent hover:border-accent transition-colors disabled:opacity-50"
+                  >
+                    重置
+                  </button>
+                )}
+              </div>
+              <input
+                ref={fileInputRefs[i]}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={(e) => handleHeroFileChange(i, e)}
+                className="hidden"
+              />
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}

@@ -60,6 +60,8 @@ export type User = {
   avatarUrl: string;
   contact: string;
   createdAt: string;
+  isAdmin: boolean;
+  isOwner: boolean;
 };
 
 export type CheckIn = {

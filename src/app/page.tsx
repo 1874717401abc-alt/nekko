@@ -36,12 +36,13 @@ function formatTime(iso: string) {
 }
 
 export default async function Dashboard() {
-  const [tasks, inspiration, library, members, checkins] = await Promise.all([
+  const [tasks, inspiration, library, members, checkins, heroImages] = await Promise.all([
     readData<ProgressTask[]>("progress"),
     readData<InspirationItem[]>("inspiration"),
     readData<LibraryItem[]>("library"),
     Promise.resolve(listUsers()),
     readData<CheckIn[]>("checkins"),
+    readData<string[]>("hero"),
   ]);
 
   const todo = tasks.filter((t) => t.status === "todo");
@@ -80,7 +81,7 @@ export default async function Dashboard() {
       />
 
       <FadeIn delay={0.05} className="mb-20">
-        <HomeHero />
+        <HomeHero heroImages={heroImages} />
       </FadeIn>
 
       {/* Slim summary bar: stats + check-in */}
