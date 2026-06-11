@@ -49,6 +49,14 @@ export default function InspirationBoard({
   const [tags, setTags] = useState("");
   const [projectId, setProjectId] = useState("");
 
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editType, setEditType] = useState<InspirationItem["type"]>("note");
+  const [editUrl, setEditUrl] = useState("");
+  const [editNote, setEditNote] = useState("");
+  const [editTags, setEditTags] = useState("");
+  const [editProjectId, setEditProjectId] = useState("");
+
   const allTags = Array.from(new Set(items.flatMap((i) => i.tags))).sort();
 
   const filtered = items
@@ -96,6 +104,43 @@ export default function InspirationBoard({
   async function handleDelete(id: string) {
     const next = items.filter((i) => i.id !== id);
     setItems(next);
+    await persist(next);
+  }
+
+  function startEdit(item: InspirationItem) {
+    setEditingId(item.id);
+    setEditTitle(item.title);
+    setEditType(item.type);
+    setEditUrl(item.url ?? "");
+    setEditNote(item.note ?? "");
+    setEditTags(item.tags.join(", "));
+    setEditProjectId(item.projectId ?? "");
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+  }
+
+  async function handleEditSave(id: string) {
+    if (!editTitle.trim()) return;
+    const next = items.map((i) =>
+      i.id === id
+        ? {
+            ...i,
+            title: editTitle.trim(),
+            type: editType,
+            url: editUrl.trim() || undefined,
+            note: editNote.trim() || undefined,
+            tags: editTags
+              .split(/[,，]/)
+              .map((t) => t.trim())
+              .filter(Boolean),
+            projectId: editProjectId || undefined,
+          }
+        : i
+    );
+    setItems(next);
+    setEditingId(null);
     await persist(next);
   }
 
@@ -263,57 +308,165 @@ export default function InspirationBoard({
               transition={{ duration: 0.35, ease: easeOut }}
               className="break-inside-avoid rounded-2xl border border-line/70 bg-card p-5"
             >
-              <div className="flex items-start justify-between gap-3 mb-2">
-                <span className="text-[11px] uppercase tracking-[0.2em] text-accent">
-                  {typeLabel[item.type]}
-                </span>
-                <button
-                  onClick={() => handleDelete(item.id)}
-                  className="text-ink-soft hover:text-accent text-xs"
-                  aria-label="删除"
-                >
-                  删除
-                </button>
-              </div>
-              <h3 className="font-serif-display text-lg text-ink mb-1.5">{item.title}</h3>
-              {item.url && (
-                <a
-                  href={item.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block text-xs text-accent break-all mb-1.5 hover:underline"
-                >
-                  {item.url}
-                </a>
-              )}
-              {item.note && (
-                <p className="text-sm text-ink-soft leading-relaxed whitespace-pre-wrap">
-                  {item.note}
-                </p>
-              )}
-              <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-2 mt-4">
-                <div className="flex flex-wrap gap-1.5">
-                  {item.projectId && projects.find((p) => p.id === item.projectId) && (
-                    <Link
-                      href={`/projects/${item.projectId}`}
-                      className="text-[11px] px-2 py-0.5 rounded-full bg-accent/10 text-accent hover:bg-accent/20"
-                    >
-                      {projects.find((p) => p.id === item.projectId)?.name}
-                    </Link>
+              {editingId === item.id ? (
+                <div className="flex flex-col gap-3">
+                  <div>
+                    <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+                      标题
+                    </label>
+                    <input
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      className="w-full rounded-lg border border-line bg-paper px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+                        类型
+                      </label>
+                      <select
+                        value={editType}
+                        onChange={(e) => setEditType(e.target.value as InspirationItem["type"])}
+                        className="w-full rounded-lg border border-line bg-paper px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent"
+                      >
+                        <option value="note">笔记</option>
+                        <option value="link">链接</option>
+                        <option value="image">图片</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+                        标签（逗号分隔）
+                      </label>
+                      <input
+                        value={editTags}
+                        onChange={(e) => setEditTags(e.target.value)}
+                        className="w-full rounded-lg border border-line bg-paper px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent"
+                      />
+                    </div>
+                  </div>
+                  {projects.length > 0 && (
+                    <div>
+                      <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+                        所属项目
+                      </label>
+                      <select
+                        value={editProjectId}
+                        onChange={(e) => setEditProjectId(e.target.value)}
+                        className="w-full rounded-lg border border-line bg-paper px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent"
+                      >
+                        <option value="">不归属项目</option>
+                        {projects.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   )}
-                  {item.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="text-[11px] px-2 py-0.5 rounded-full bg-paper-soft text-ink-soft"
+                  {(editType === "link" || editType === "image") && (
+                    <div>
+                      <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+                        链接地址
+                      </label>
+                      <input
+                        value={editUrl}
+                        onChange={(e) => setEditUrl(e.target.value)}
+                        className="w-full rounded-lg border border-line bg-paper px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent"
+                        placeholder="https://"
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+                      备注
+                    </label>
+                    <textarea
+                      value={editNote}
+                      onChange={(e) => setEditNote(e.target.value)}
+                      rows={3}
+                      className="w-full rounded-lg border border-line bg-paper px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent resize-none"
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <button
+                      onClick={cancelEdit}
+                      className="text-xs px-4 py-2 rounded-full border border-line text-ink-soft hover:border-accent/50 hover:text-accent transition-colors"
                     >
-                      {tag}
-                    </span>
-                  ))}
+                      取消
+                    </button>
+                    <button
+                      onClick={() => handleEditSave(item.id)}
+                      className="text-xs px-4 py-2 rounded-full bg-accent text-paper hover:bg-accent/90 transition-colors"
+                    >
+                      保存
+                    </button>
+                  </div>
                 </div>
-                <span className="text-[11px] text-ink-soft shrink-0 ml-auto">
-                  {item.createdBy} · {formatDate(item.createdAt)}
-                </span>
-              </div>
+              ) : (
+                <>
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <span className="text-[11px] uppercase tracking-[0.2em] text-accent">
+                      {typeLabel[item.type]}
+                    </span>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <button
+                        onClick={() => startEdit(item)}
+                        className="text-ink-soft hover:text-accent text-xs"
+                      >
+                        编辑
+                      </button>
+                      <button
+                        onClick={() => handleDelete(item.id)}
+                        className="text-ink-soft hover:text-accent text-xs"
+                        aria-label="删除"
+                      >
+                        删除
+                      </button>
+                    </div>
+                  </div>
+                  <h3 className="font-serif-display text-lg text-ink mb-1.5">{item.title}</h3>
+                  {item.url && (
+                    <a
+                      href={item.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block text-xs text-accent break-all mb-1.5 hover:underline"
+                    >
+                      {item.url}
+                    </a>
+                  )}
+                  {item.note && (
+                    <p className="text-sm text-ink-soft leading-relaxed whitespace-pre-wrap">
+                      {item.note}
+                    </p>
+                  )}
+                  <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-2 mt-4">
+                    <div className="flex flex-wrap gap-1.5">
+                      {item.projectId && projects.find((p) => p.id === item.projectId) && (
+                        <Link
+                          href={`/projects/${item.projectId}`}
+                          className="text-[11px] px-2 py-0.5 rounded-full bg-accent/10 text-accent hover:bg-accent/20"
+                        >
+                          {projects.find((p) => p.id === item.projectId)?.name}
+                        </Link>
+                      )}
+                      {item.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="text-[11px] px-2 py-0.5 rounded-full bg-paper-soft text-ink-soft"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                    <span className="text-[11px] text-ink-soft shrink-0 ml-auto">
+                      {item.createdBy} · {formatDate(item.createdAt)}
+                    </span>
+                  </div>
+                </>
+              )}
             </motion.div>
           ))}
         </AnimatePresence>

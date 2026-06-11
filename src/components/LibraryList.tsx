@@ -57,6 +57,14 @@ export default function LibraryList({
   const [note, setNote] = useState("");
   const [projectId, setProjectId] = useState("");
 
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editType, setEditType] = useState<LibraryItem["type"]>("doc");
+  const [editUrl, setEditUrl] = useState("");
+  const [editCategory, setEditCategory] = useState("");
+  const [editNote, setEditNote] = useState("");
+  const [editProjectId, setEditProjectId] = useState("");
+
   const categories = Array.from(new Set(items.map((i) => i.category))).sort();
   const filtered = items
     .filter((i) => (activeCategory ? i.category === activeCategory : true))
@@ -98,6 +106,40 @@ export default function LibraryList({
   async function handleDelete(id: string) {
     const next = items.filter((i) => i.id !== id);
     setItems(next);
+    await persist(next);
+  }
+
+  function startEdit(item: LibraryItem) {
+    setEditingId(item.id);
+    setEditTitle(item.title);
+    setEditType(item.type);
+    setEditUrl(item.url);
+    setEditCategory(item.category);
+    setEditNote(item.note ?? "");
+    setEditProjectId(item.projectId ?? "");
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+  }
+
+  async function handleEditSave(id: string) {
+    if (!editTitle.trim() || !editUrl.trim()) return;
+    const next = items.map((i) =>
+      i.id === id
+        ? {
+            ...i,
+            title: editTitle.trim(),
+            type: editType,
+            url: editUrl.trim(),
+            category: editCategory.trim() || "未分类",
+            note: editNote.trim() || undefined,
+            projectId: editProjectId || undefined,
+          }
+        : i
+    );
+    setItems(next);
+    setEditingId(null);
     await persist(next);
   }
 
@@ -262,44 +304,145 @@ export default function LibraryList({
               transition={{ duration: 0.3, ease: easeOut }}
               className="border-b border-line/70 px-1 py-4 flex flex-wrap items-center gap-x-4 gap-y-2"
             >
-              <span className="h-10 w-10 shrink-0 flex items-center justify-center rounded-xl bg-accent/10 text-accent">
-                {item.type === "video" ? <VideoIcon /> : <DocIcon />}
-              </span>
-              <div className="flex-1 min-w-0">
-                <a
-                  href={item.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block truncate text-sm font-medium text-ink hover:text-accent"
-                >
-                  {item.title}
-                </a>
-                {item.note && (
-                  <p className="mt-0.5 text-xs text-ink-soft truncate">{item.note}</p>
-                )}
-              </div>
-              <div className="flex items-center gap-2 flex-wrap shrink-0 ml-auto">
-                {item.projectId && projects.find((p) => p.id === item.projectId) && (
-                  <Link
-                    href={`/projects/${item.projectId}`}
-                    className="text-[11px] px-2.5 py-1 rounded-full bg-accent/10 text-accent hover:bg-accent/20"
-                  >
-                    {projects.find((p) => p.id === item.projectId)?.name}
-                  </Link>
-                )}
-                <span className="text-[11px] px-2.5 py-1 rounded-full bg-paper-soft text-ink-soft">
-                  {item.category}
-                </span>
-                <span className="text-[11px] text-ink-soft hidden sm:inline">
-                  {item.createdBy} · {formatDate(item.addedAt)}
-                </span>
-                <button
-                  onClick={() => handleDelete(item.id)}
-                  className="text-ink-soft hover:text-accent text-xs"
-                >
-                  删除
-                </button>
-              </div>
+              {editingId === item.id ? (
+                <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+                      标题
+                    </label>
+                    <input
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      className="w-full rounded-lg border border-line bg-paper px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+                      类型
+                    </label>
+                    <select
+                      value={editType}
+                      onChange={(e) => setEditType(e.target.value as LibraryItem["type"])}
+                      className="w-full rounded-lg border border-line bg-paper px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent"
+                    >
+                      <option value="doc">文档</option>
+                      <option value="video">视频</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+                      分类
+                    </label>
+                    <input
+                      value={editCategory}
+                      onChange={(e) => setEditCategory(e.target.value)}
+                      className="w-full rounded-lg border border-line bg-paper px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent"
+                    />
+                  </div>
+                  {projects.length > 0 && (
+                    <div>
+                      <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+                        所属项目
+                      </label>
+                      <select
+                        value={editProjectId}
+                        onChange={(e) => setEditProjectId(e.target.value)}
+                        className="w-full rounded-lg border border-line bg-paper px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent"
+                      >
+                        <option value="">不归属项目</option>
+                        {projects.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+                      链接地址
+                    </label>
+                    <input
+                      value={editUrl}
+                      onChange={(e) => setEditUrl(e.target.value)}
+                      className="w-full rounded-lg border border-line bg-paper px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent"
+                      placeholder="https://"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+                      备注
+                    </label>
+                    <textarea
+                      value={editNote}
+                      onChange={(e) => setEditNote(e.target.value)}
+                      rows={2}
+                      className="w-full rounded-lg border border-line bg-paper px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent resize-none"
+                    />
+                  </div>
+                  <div className="sm:col-span-2 flex justify-end gap-2">
+                    <button
+                      onClick={cancelEdit}
+                      className="text-xs px-4 py-2 rounded-full border border-line text-ink-soft hover:border-accent/50 hover:text-accent transition-colors"
+                    >
+                      取消
+                    </button>
+                    <button
+                      onClick={() => handleEditSave(item.id)}
+                      className="text-xs px-4 py-2 rounded-full bg-accent text-paper hover:bg-accent/90 transition-colors"
+                    >
+                      保存
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <span className="h-10 w-10 shrink-0 flex items-center justify-center rounded-xl bg-accent/10 text-accent">
+                    {item.type === "video" ? <VideoIcon /> : <DocIcon />}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <a
+                      href={item.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block truncate text-sm font-medium text-ink hover:text-accent"
+                    >
+                      {item.title}
+                    </a>
+                    {item.note && (
+                      <p className="mt-0.5 text-xs text-ink-soft truncate">{item.note}</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap shrink-0 ml-auto">
+                    {item.projectId && projects.find((p) => p.id === item.projectId) && (
+                      <Link
+                        href={`/projects/${item.projectId}`}
+                        className="text-[11px] px-2.5 py-1 rounded-full bg-accent/10 text-accent hover:bg-accent/20"
+                      >
+                        {projects.find((p) => p.id === item.projectId)?.name}
+                      </Link>
+                    )}
+                    <span className="text-[11px] px-2.5 py-1 rounded-full bg-paper-soft text-ink-soft">
+                      {item.category}
+                    </span>
+                    <span className="text-[11px] text-ink-soft hidden sm:inline">
+                      {item.createdBy} · {formatDate(item.addedAt)}
+                    </span>
+                    <button
+                      onClick={() => startEdit(item)}
+                      className="text-ink-soft hover:text-accent text-xs"
+                    >
+                      编辑
+                    </button>
+                    <button
+                      onClick={() => handleDelete(item.id)}
+                      className="text-ink-soft hover:text-accent text-xs"
+                    >
+                      删除
+                    </button>
+                  </div>
+                </>
+              )}
             </motion.div>
           ))}
         </AnimatePresence>
