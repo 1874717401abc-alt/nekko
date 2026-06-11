@@ -4,6 +4,8 @@ import AdminPanel from "@/components/AdminPanel";
 import { getCurrentUser } from "@/lib/auth";
 import { listUsers } from "@/lib/users";
 import { readData } from "@/lib/store";
+import { mergeHeroContent } from "@/lib/heroContent";
+import type { HeroContent } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -16,10 +18,12 @@ export default async function AdminPage() {
     redirect("/");
   }
 
-  const [users, heroImages] = await Promise.all([
+  const [users, heroImages, heroContentRaw] = await Promise.all([
     Promise.resolve(listUsers()),
     readData<string[]>("hero"),
+    readData<Partial<HeroContent>>("heroContent"),
   ]);
+  const heroContent = mergeHeroContent(heroContentRaw);
 
   return (
     <div className="px-6 sm:px-10 lg:px-16 py-14 sm:py-20 max-w-4xl mx-auto">
@@ -28,7 +32,7 @@ export default async function AdminPage() {
         title="管理控制台"
         description="管理网站成员权限，更换首页轮播图。"
       />
-      <AdminPanel currentUser={user} users={users} heroImages={heroImages} />
+      <AdminPanel currentUser={user} users={users} heroImages={heroImages} heroContent={heroContent} />
     </div>
   );
 }

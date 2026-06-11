@@ -4,6 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { DEFAULT_HERO_CONTENT } from "@/lib/heroContent";
+import type { HeroContent } from "@/lib/types";
 
 const easeOut = [0.22, 1, 0.36, 1] as const;
 
@@ -16,37 +18,10 @@ const navLinks = [
 
 const thumbs = ["/showcase/thumb-1.jpg", "/showcase/thumb-2.jpg", "/showcase/thumb-3.jpg", "/showcase/thumb-4.jpg"];
 
-const slides = [
-  {
-    bg: "/showcase/hero-main.jpg",
-    poster: "/showcase/poster-side.jpg",
-    vertical: "影像笔记",
-    category: "精选 · FEATURED",
-    title: "Ep.13『选题调研』",
-    desc: "围绕海外热门话题展开调研，筛选出三个候选选题方向。",
-    posterLabel: "下一步",
-    posterSub: "下集开场分镜预览",
-  },
-  {
-    bg: "/showcase/hero-2.jpg",
-    poster: "/showcase/poster-side-2.jpg",
-    vertical: "幕后纪实",
-    category: "幕后 · 制作花絮",
-    title: "Ep.12『拍摄现场』",
-    desc: "外景拍摄两小时 + 棚内补拍，专注光线与节奏的把控。",
-    posterLabel: "拍摄花絮",
-    posterSub: "现场花絮抓拍",
-  },
-  {
-    bg: "/showcase/hero-3.jpg",
-    poster: "/showcase/poster-side-3.jpg",
-    vertical: "工作室手记",
-    category: "关于 · NEKKO",
-    title: "「做值得被看见的内容」",
-    desc: "两个人的小工作室，专注灵感、节奏与品质的坚持。",
-    posterLabel: "工作室理念",
-    posterSub: "Nekko 的创作哲学",
-  },
+const slideImages = [
+  { bg: "/showcase/hero-main.jpg", poster: "/showcase/poster-side.jpg" },
+  { bg: "/showcase/hero-2.jpg", poster: "/showcase/poster-side-2.jpg" },
+  { bg: "/showcase/hero-3.jpg", poster: "/showcase/poster-side-3.jpg" },
 ];
 
 function SearchIcon() {
@@ -83,23 +58,33 @@ function PlayPauseIcon({ playing }: { playing: boolean }) {
   );
 }
 
-export default function HomeHero({ heroImages }: { heroImages?: string[] }) {
+export default function HomeHero({
+  heroImages,
+  heroContent,
+}: {
+  heroImages?: string[];
+  heroContent?: HeroContent;
+}) {
   const [active, setActive] = useState(0);
   const [playing, setPlaying] = useState(true);
 
   useEffect(() => {
     if (!playing) return;
     const id = setInterval(() => {
-      setActive((a) => (a + 1) % slides.length);
+      setActive((a) => (a + 1) % slideImages.length);
     }, 6000);
     return () => clearInterval(id);
   }, [playing]);
 
-  const slide = slides[active];
+  const texts = heroContent?.slides ?? DEFAULT_HERO_CONTENT.slides;
+  const slide = { ...slideImages[active], ...texts[active] };
   const bgSrc = heroImages?.[active] || slide.bg;
+  const latestLabel = heroContent?.latestLabel ?? DEFAULT_HERO_CONTENT.latestLabel;
+  const latestTitle = heroContent?.latestTitle ?? DEFAULT_HERO_CONTENT.latestTitle;
+  const latestDesc = heroContent?.latestDesc ?? DEFAULT_HERO_CONTENT.latestDesc;
 
   function go(delta: 1 | -1) {
-    setActive((a) => (a + delta + slides.length) % slides.length);
+    setActive((a) => (a + delta + slideImages.length) % slideImages.length);
   }
 
   return (
@@ -267,7 +252,7 @@ export default function HomeHero({ heroImages }: { heroImages?: string[] }) {
             <PlayPauseIcon playing={playing} />
           </button>
           <div className="flex items-center gap-2">
-            {slides.map((s, i) => (
+            {slideImages.map((s, i) => (
               <button
                 key={s.bg}
                 aria-label={`slide ${i + 1}`}
@@ -290,13 +275,13 @@ export default function HomeHero({ heroImages }: { heroImages?: string[] }) {
           </p>
           <div>
             <p className="text-[11px] uppercase tracking-[0.3em] text-accent mb-2">
-              本周更新
+              {latestLabel}
             </p>
             <h3 className="text-base sm:text-lg font-medium mb-2 text-ink">
-              Ep.12 成片初剪完成，进入二审反馈阶段
+              {latestTitle}
             </h3>
             <p className="text-sm text-ink-soft leading-relaxed max-w-xl">
-              已套用新的调色 LUT 并分享了测试版本，将根据反馈在本周内完成调整。
+              {latestDesc}
             </p>
           </div>
           <div className="flex md:flex-col items-center md:items-end gap-4 justify-between md:justify-start">

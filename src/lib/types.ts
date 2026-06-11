@@ -64,6 +64,22 @@ export type User = {
   isOwner: boolean;
 };
 
+export type HeroSlideText = {
+  vertical: string;
+  category: string;
+  title: string;
+  desc: string;
+  posterLabel: string;
+  posterSub: string;
+};
+
+export type HeroContent = {
+  slides: HeroSlideText[];
+  latestLabel: string;
+  latestTitle: string;
+  latestDesc: string;
+};
+
 export type CheckIn = {
   id: string;
   userId: string;

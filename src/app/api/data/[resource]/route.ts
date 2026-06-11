@@ -18,7 +18,7 @@ export async function PUT(
   { params }: { params: Promise<{ resource: string }> }
 ) {
   const { resource } = await params;
-  if (!isAllowedResource(resource) || resource === "hero") {
+  if (!isAllowedResource(resource) || resource === "hero" || resource === "heroContent") {
     return NextResponse.json({ error: "unknown resource" }, { status: 404 });
   }
   const body = await req.json();

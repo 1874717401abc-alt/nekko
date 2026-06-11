@@ -4,7 +4,8 @@ import HomeHero from "@/components/HomeHero";
 import { FadeIn, HoverCard, StaggerContainer, StaggerItem } from "@/components/motion";
 import { readData } from "@/lib/store";
 import { listUsers } from "@/lib/users";
-import type { CheckIn, InspirationItem, LibraryItem, ProgressTask } from "@/lib/types";
+import { mergeHeroContent } from "@/lib/heroContent";
+import type { CheckIn, HeroContent, InspirationItem, LibraryItem, ProgressTask } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -36,14 +37,16 @@ function formatTime(iso: string) {
 }
 
 export default async function Dashboard() {
-  const [tasks, inspiration, library, members, checkins, heroImages] = await Promise.all([
+  const [tasks, inspiration, library, members, checkins, heroImages, heroContentRaw] = await Promise.all([
     readData<ProgressTask[]>("progress"),
     readData<InspirationItem[]>("inspiration"),
     readData<LibraryItem[]>("library"),
     Promise.resolve(listUsers()),
     readData<CheckIn[]>("checkins"),
     readData<string[]>("hero"),
+    readData<Partial<HeroContent>>("heroContent"),
   ]);
+  const heroContent = mergeHeroContent(heroContentRaw);
 
   const todo = tasks.filter((t) => t.status === "todo");
   const doing = tasks.filter((t) => t.status === "doing");
@@ -81,7 +84,7 @@ export default async function Dashboard() {
       />
 
       <FadeIn delay={0.05} className="mb-20">
-        <HomeHero heroImages={heroImages} />
+        <HomeHero heroImages={heroImages} heroContent={heroContent} />
       </FadeIn>
 
       {/* Slim summary bar: stats + check-in */}

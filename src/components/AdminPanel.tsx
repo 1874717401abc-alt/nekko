@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Avatar from "@/components/Avatar";
-import type { User } from "@/lib/types";
+import type { HeroContent, User } from "@/lib/types";
 
 const SLIDE_LABELS = ["轮播图 1（主图）", "轮播图 2", "轮播图 3"];
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -21,10 +21,12 @@ export default function AdminPanel({
   currentUser,
   users,
   heroImages,
+  heroContent,
 }: {
   currentUser: User;
   users: User[];
   heroImages: string[];
+  heroContent: HeroContent;
 }) {
   const router = useRouter();
   const [memberError, setMemberError] = useState<string | null>(null);
@@ -37,6 +39,50 @@ export default function AdminPanel({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadingSlot, setUploadingSlot] = useState<number | null>(null);
   const fileInputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
+
+  const [content, setContent] = useState<HeroContent>(heroContent);
+  const [contentSaving, setContentSaving] = useState(false);
+  const [contentError, setContentError] = useState<string | null>(null);
+  const [contentSaved, setContentSaved] = useState(false);
+
+  function updateSlideField(index: number, field: keyof HeroContent["slides"][number], value: string) {
+    setContentSaved(false);
+    setContent((c) => ({
+      ...c,
+      slides: c.slides.map((s, i) => (i === index ? { ...s, [field]: value } : s)),
+    }));
+  }
+
+  function updateLatestField(field: "latestLabel" | "latestTitle" | "latestDesc", value: string) {
+    setContentSaved(false);
+    setContent((c) => ({ ...c, [field]: value }));
+  }
+
+  async function saveContent() {
+    setContentSaving(true);
+    setContentError(null);
+    setContentSaved(false);
+    try {
+      const res = await fetch("/api/admin/hero-content", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(content),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        setContentError(data?.error ?? "保存失败，请重试。");
+        return;
+      }
+      const updated = await res.json();
+      setContent(updated);
+      setContentSaved(true);
+      router.refresh();
+    } catch {
+      setContentError("保存失败，请重试。");
+    } finally {
+      setContentSaving(false);
+    }
+  }
 
   async function toggleAdmin(userId: string, makeAdmin: boolean) {
     setMemberError(null);
@@ -217,6 +263,117 @@ export default function AdminPanel({
               />
             </div>
           ))}
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-line/70 bg-card p-6 sm:p-8">
+        <h2 className="text-sm font-medium text-ink mb-1">首页轮播文字</h2>
+        <p className="text-xs text-ink-soft mb-5">
+          编辑首页轮播图模块和最新动态板块的文案。
+        </p>
+        {contentError && <p className="text-xs text-red-400 mb-3">{contentError}</p>}
+        <div className="flex flex-col gap-6">
+          {content.slides.map((slide, i) => (
+            <div key={i} className="flex flex-col gap-3 rounded-xl border border-line/70 p-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-accent">
+                {SLIDE_LABELS[i]}
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label className="flex flex-col gap-1.5 text-xs text-ink-soft">
+                  竖排小标题
+                  <input
+                    value={slide.vertical}
+                    onChange={(e) => updateSlideField(i, "vertical", e.target.value)}
+                    className="rounded-lg border border-line bg-paper-soft px-3 py-2 text-sm text-ink"
+                  />
+                </label>
+                <label className="flex flex-col gap-1.5 text-xs text-ink-soft">
+                  分类标签
+                  <input
+                    value={slide.category}
+                    onChange={(e) => updateSlideField(i, "category", e.target.value)}
+                    className="rounded-lg border border-line bg-paper-soft px-3 py-2 text-sm text-ink"
+                  />
+                </label>
+                <label className="flex flex-col gap-1.5 text-xs text-ink-soft sm:col-span-2">
+                  大标题
+                  <input
+                    value={slide.title}
+                    onChange={(e) => updateSlideField(i, "title", e.target.value)}
+                    className="rounded-lg border border-line bg-paper-soft px-3 py-2 text-sm text-ink"
+                  />
+                </label>
+                <label className="flex flex-col gap-1.5 text-xs text-ink-soft sm:col-span-2">
+                  描述文字
+                  <textarea
+                    value={slide.desc}
+                    onChange={(e) => updateSlideField(i, "desc", e.target.value)}
+                    rows={2}
+                    className="rounded-lg border border-line bg-paper-soft px-3 py-2 text-sm text-ink resize-none"
+                  />
+                </label>
+                <label className="flex flex-col gap-1.5 text-xs text-ink-soft">
+                  右侧卡片标签
+                  <input
+                    value={slide.posterLabel}
+                    onChange={(e) => updateSlideField(i, "posterLabel", e.target.value)}
+                    className="rounded-lg border border-line bg-paper-soft px-3 py-2 text-sm text-ink"
+                  />
+                </label>
+                <label className="flex flex-col gap-1.5 text-xs text-ink-soft">
+                  右侧卡片说明
+                  <input
+                    value={slide.posterSub}
+                    onChange={(e) => updateSlideField(i, "posterSub", e.target.value)}
+                    className="rounded-lg border border-line bg-paper-soft px-3 py-2 text-sm text-ink"
+                  />
+                </label>
+              </div>
+            </div>
+          ))}
+
+          <div className="flex flex-col gap-3 rounded-xl border border-line/70 p-4">
+            <p className="text-xs uppercase tracking-[0.2em] text-accent">最新动态板块</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <label className="flex flex-col gap-1.5 text-xs text-ink-soft">
+                小标签
+                <input
+                  value={content.latestLabel}
+                  onChange={(e) => updateLatestField("latestLabel", e.target.value)}
+                  className="rounded-lg border border-line bg-paper-soft px-3 py-2 text-sm text-ink"
+                />
+              </label>
+              <label className="flex flex-col gap-1.5 text-xs text-ink-soft sm:col-span-2">
+                标题
+                <input
+                  value={content.latestTitle}
+                  onChange={(e) => updateLatestField("latestTitle", e.target.value)}
+                  className="rounded-lg border border-line bg-paper-soft px-3 py-2 text-sm text-ink"
+                />
+              </label>
+              <label className="flex flex-col gap-1.5 text-xs text-ink-soft sm:col-span-2">
+                描述文字
+                <textarea
+                  value={content.latestDesc}
+                  onChange={(e) => updateLatestField("latestDesc", e.target.value)}
+                  rows={2}
+                  className="rounded-lg border border-line bg-paper-soft px-3 py-2 text-sm text-ink resize-none"
+                />
+              </label>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={saveContent}
+              disabled={contentSaving}
+              className="text-xs px-4 py-2 rounded-full border border-line text-ink-soft hover:text-accent hover:border-accent transition-colors disabled:opacity-50"
+            >
+              {contentSaving ? "保存中…" : "保存文字"}
+            </button>
+            {contentSaved && <p className="text-xs text-accent">已保存。</p>}
+          </div>
         </div>
       </section>
     </div>

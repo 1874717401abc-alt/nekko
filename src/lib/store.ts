@@ -1,8 +1,8 @@
 import { getDb } from "@/lib/db";
 
-export type ResourceName = "inspiration" | "library" | "progress" | "checkins" | "hero";
+export type ResourceName = "inspiration" | "library" | "progress" | "checkins" | "hero" | "heroContent";
 
-const ALLOWED: ResourceName[] = ["inspiration", "library", "progress", "checkins", "hero"];
+const ALLOWED: ResourceName[] = ["inspiration", "library", "progress", "checkins", "hero", "heroContent"];
 
 export function isAllowedResource(name: string): name is ResourceName {
   return (ALLOWED as string[]).includes(name);
