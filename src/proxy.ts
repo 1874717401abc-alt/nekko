@@ -1,17 +1,23 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { SESSION_COOKIE, verifySessionToken } from "@/lib/session";
+import { GUEST_COOKIE, SESSION_COOKIE, verifySessionToken } from "@/lib/session";
 
 export async function proxy(request: NextRequest) {
   const token = request.cookies.get(SESSION_COOKIE)?.value;
   const session = await verifySessionToken(token);
   const authed = !!session;
+  const isGuest = request.cookies.get(GUEST_COOKIE)?.value === "1";
 
   const isAuthPage =
     request.nextUrl.pathname.startsWith("/login") ||
     request.nextUrl.pathname.startsWith("/register");
   const isAuthApi = request.nextUrl.pathname.startsWith("/api/auth");
+  const isHome = request.nextUrl.pathname === "/";
 
   if (isAuthApi) {
+    return NextResponse.next();
+  }
+
+  if (!authed && isGuest && isHome) {
     return NextResponse.next();
   }
 

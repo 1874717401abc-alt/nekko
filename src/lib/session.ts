@@ -1,8 +1,10 @@
 // Edge-safe session token helpers (no Node-only APIs), used by middleware.
 
 export const SESSION_COOKIE = "nekko_session";
+export const GUEST_COOKIE = "nekko_guest";
 
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 180; // 180 days
+export const GUEST_COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 
 function sessionSecret(): string {
   return process.env.SESSION_SECRET ?? "nekko-dev-secret-change-me";

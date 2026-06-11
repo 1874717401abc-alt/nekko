@@ -11,6 +11,14 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [guestLoading, setGuestLoading] = useState(false);
+
+  async function handleGuestEnter() {
+    setGuestLoading(true);
+    await fetch("/api/auth/guest", { method: "POST" });
+    router.push("/");
+    router.refresh();
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -99,6 +107,15 @@ export default function LoginPage() {
             </Link>
           </p>
         </form>
+
+        <button
+          type="button"
+          onClick={handleGuestEnter}
+          disabled={guestLoading}
+          className="mt-4 w-full rounded-full border border-line text-ink-soft text-sm font-medium py-2.5 transition-colors hover:text-accent hover:border-accent disabled:opacity-50"
+        >
+          {guestLoading ? "进入中…" : "访客进入"}
+        </button>
       </FadeIn>
     </div>
   );

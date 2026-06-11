@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import PageHeader from "@/components/PageHeader";
 import HomeHero from "@/components/HomeHero";
 import { FadeIn, HoverCard, StaggerContainer, StaggerItem } from "@/components/motion";
 import { readData } from "@/lib/store";
 import { listUsers } from "@/lib/users";
+import { getCurrentUser, isGuest } from "@/lib/auth";
 import { mergeHeroContent } from "@/lib/heroContent";
 import type { CheckIn, HeroContent, InspirationItem, LibraryItem, ProgressTask } from "@/lib/types";
 
@@ -37,7 +39,9 @@ function formatTime(iso: string) {
 }
 
 export default async function Dashboard() {
-  const [tasks, inspiration, library, members, checkins, heroImages, heroContentRaw] = await Promise.all([
+  const [currentUser, guest, tasks, inspiration, library, members, checkins, heroImages, heroContentRaw] = await Promise.all([
+    getCurrentUser(),
+    isGuest(),
     readData<ProgressTask[]>("progress"),
     readData<InspirationItem[]>("inspiration"),
     readData<LibraryItem[]>("library"),
@@ -46,6 +50,12 @@ export default async function Dashboard() {
     readData<string[]>("hero"),
     readData<Partial<HeroContent>>("heroContent"),
   ]);
+
+  if (!currentUser && !guest) {
+    redirect("/login");
+  }
+
+  const isGuestView = !currentUser;
   const heroContent = mergeHeroContent(heroContentRaw);
 
   const todo = tasks.filter((t) => t.status === "todo");
@@ -83,10 +93,12 @@ export default async function Dashboard() {
         description="记录灵感、整理素材、跟进进度——一个只属于我们两个人的小工作室。"
       />
 
-      <FadeIn delay={0.05} className="mb-20">
+      <FadeIn delay={0.05} className={isGuestView ? "" : "mb-20"}>
         <HomeHero heroImages={heroImages} heroContent={heroContent} />
       </FadeIn>
 
+      {!isGuestView && (
+      <>
       {/* Slim summary bar: stats + check-in */}
       <FadeIn delay={0.15} className="mb-20">
         <div className="flex flex-col items-center gap-6">
@@ -237,6 +249,8 @@ export default async function Dashboard() {
           </section>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }

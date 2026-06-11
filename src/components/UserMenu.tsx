@@ -6,18 +6,16 @@ import { useRouter } from "next/navigation";
 import Avatar from "@/components/Avatar";
 import type { User } from "@/lib/types";
 
-export default function UserMenu({ className = "" }: { className?: string }) {
+export default function UserMenu({
+  className = "",
+  me,
+}: {
+  className?: string;
+  me?: { user: User | null; guest: boolean } | null;
+}) {
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    fetch("/api/auth/me")
-      .then((res) => (res.ok ? res.json() : null))
-      .then(setUser)
-      .catch(() => setUser(null));
-  }, []);
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
@@ -35,8 +33,13 @@ export default function UserMenu({ className = "" }: { className?: string }) {
     router.refresh();
   }
 
-  if (!user) {
+  if (me === null || me === undefined) {
     return <div className={`rounded-full bg-paper-soft animate-pulse ${className}`} />;
+  }
+
+  const user = me.user;
+  if (!user) {
+    return null;
   }
 
   return (

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { SESSION_COOKIE, SESSION_COOKIE_MAX_AGE, createSessionToken, verifyPasswordHash } from "@/lib/auth";
+import { GUEST_COOKIE, SESSION_COOKIE, SESSION_COOKIE_MAX_AGE, createSessionToken, verifyPasswordHash } from "@/lib/auth";
 import { getUserByUsername } from "@/lib/users";
 
 export async function POST(req: NextRequest) {
@@ -20,5 +20,6 @@ export async function POST(req: NextRequest) {
     path: "/",
     maxAge: SESSION_COOKIE_MAX_AGE,
   });
+  res.cookies.delete(GUEST_COOKIE);
   return res;
 }

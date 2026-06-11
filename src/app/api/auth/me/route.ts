@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, isGuest } from "@/lib/auth";
 
 export async function GET() {
   const user = await getCurrentUser();
-  if (!user) {
-    return NextResponse.json({ error: "未登录" }, { status: 401 });
+  if (user) {
+    return NextResponse.json({ user, guest: false });
   }
-  return NextResponse.json(user);
+  if (await isGuest()) {
+    return NextResponse.json({ user: null, guest: true });
+  }
+  return NextResponse.json({ error: "未登录" }, { status: 401 });
 }

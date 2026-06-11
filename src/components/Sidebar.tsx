@@ -1,10 +1,12 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import ThemeToggle from "@/components/ThemeToggle";
 import UserMenu from "@/components/UserMenu";
+import type { User } from "@/lib/types";
 
 const navItems: { href: string; label: string; sub: string; icon: ReactNode }[] = [
   {
@@ -99,12 +101,41 @@ const navItems: { href: string; label: string; sub: string; icon: ReactNode }[] 
   },
 ];
 
+const joinUsIcon = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4">
+    <path d="M12 20.5c-4.8-3-8-6-8-9.5a4.2 4.2 0 0 1 8-1.8A4.2 4.2 0 0 1 20 11c0 3.5-3.2 6.5-8 9.5Z" strokeLinejoin="round" />
+  </svg>
+);
+
+const loginIcon = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4">
+    <path d="M9 4h-3a1.5 1.5 0 0 0-1.5 1.5v13A1.5 1.5 0 0 0 6 20h3" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M12 12h9m0 0-3.5-3.5M21 12l-3.5 3.5" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+type MeState = { user: User | null; guest: boolean };
+
 export default function Sidebar() {
   const pathname = usePathname();
+  const [me, setMe] = useState<MeState | null>(null);
+  const [joinOpen, setJoinOpen] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((res) => (res.ok ? res.json() : { user: null, guest: false }))
+      .then((data) => setMe(data))
+      .catch(() => setMe({ user: null, guest: false }));
+  }, []);
 
   if (pathname?.startsWith("/login") || pathname?.startsWith("/register")) {
     return null;
   }
+
+  const isGuestView = me?.guest === true && !me?.user;
+  const visibleNavItems = isGuestView
+    ? navItems.filter((item) => item.href === "/")
+    : navItems;
 
   return (
     <>
@@ -121,12 +152,12 @@ export default function Sidebar() {
           </Link>
           <div className="flex items-center gap-2 shrink-0">
             <ThemeToggle className="h-8 w-8 shrink-0" />
-            <UserMenu className="h-8 w-8 shrink-0" />
+            {!isGuestView && <UserMenu className="h-8 w-8 shrink-0" me={me} />}
           </div>
         </div>
 
         <nav className="flex flex-col gap-1">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const active =
               item.href === "/" ? pathname === "/" : pathname?.startsWith(item.href);
             return (
@@ -155,6 +186,41 @@ export default function Sidebar() {
               </Link>
             );
           })}
+
+          {isGuestView && (
+            <>
+              <button
+                type="button"
+                onClick={() => setJoinOpen(true)}
+                className="group flex items-center gap-3 rounded-xl px-3.5 py-3 text-left text-ink-soft transition-colors hover:bg-card/60 hover:text-ink"
+              >
+                <span className="h-8 w-8 flex items-center justify-center rounded-lg text-ink-soft group-hover:text-accent">
+                  <span className="block h-[18px] w-[18px]">{joinUsIcon}</span>
+                </span>
+                <span>
+                  <span className="block text-sm font-medium leading-tight">加入我们</span>
+                  <span className="block text-[11px] tracking-wide text-ink-soft/80">
+                    Join Us
+                  </span>
+                </span>
+              </button>
+
+              <Link
+                href="/login"
+                className="group flex items-center gap-3 rounded-xl px-3.5 py-3 text-ink-soft transition-colors hover:bg-card/60 hover:text-ink"
+              >
+                <span className="h-8 w-8 flex items-center justify-center rounded-lg text-ink-soft group-hover:text-accent">
+                  <span className="block h-[18px] w-[18px]">{loginIcon}</span>
+                </span>
+                <span>
+                  <span className="block text-sm font-medium leading-tight">登录/注册</span>
+                  <span className="block text-[11px] tracking-wide text-ink-soft/80">
+                    Sign in
+                  </span>
+                </span>
+              </Link>
+            </>
+          )}
         </nav>
 
         <div className="mt-auto pt-8 border-t border-line">
@@ -173,7 +239,7 @@ export default function Sidebar() {
           Nekko
         </Link>
         <nav className="flex items-center gap-0.5 overflow-x-auto flex-nowrap ml-auto min-w-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const active =
               item.href === "/" ? pathname === "/" : pathname?.startsWith(item.href);
             return (
@@ -188,10 +254,56 @@ export default function Sidebar() {
               </Link>
             );
           })}
+
+          {isGuestView && (
+            <>
+              <button
+                type="button"
+                onClick={() => setJoinOpen(true)}
+                aria-label="加入我们"
+                className="h-9 w-9 shrink-0 flex items-center justify-center rounded-lg text-ink-soft"
+              >
+                <span className="block h-[18px] w-[18px]">{joinUsIcon}</span>
+              </button>
+              <Link
+                href="/login"
+                aria-label="登录/注册"
+                className="h-9 w-9 shrink-0 flex items-center justify-center rounded-lg text-ink-soft"
+              >
+                <span className="block h-[18px] w-[18px]">{loginIcon}</span>
+              </Link>
+            </>
+          )}
+
           <ThemeToggle className="h-9 w-9 shrink-0 ml-0.5" />
         </nav>
-        <UserMenu className="h-9 w-9 shrink-0" />
+        {!isGuestView && <UserMenu className="h-9 w-9 shrink-0" me={me} />}
       </header>
+
+      {joinOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-6"
+          onClick={() => setJoinOpen(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl border border-line bg-card p-6 text-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="font-serif-display text-2xl text-ink mb-3">加入我们</h3>
+            <p className="text-sm text-ink-soft leading-relaxed mb-1">
+              欢迎联系我们，一起加入 Nekko Studio：
+            </p>
+            <p className="text-base font-medium text-accent mb-6">NEKKOTOhare vx</p>
+            <button
+              type="button"
+              onClick={() => setJoinOpen(false)}
+              className="rounded-full bg-accent text-paper text-sm font-medium px-6 py-2 transition-opacity hover:opacity-90"
+            >
+              知道了
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }
