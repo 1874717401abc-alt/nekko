@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import ThemeToggle from "@/components/ThemeToggle";
-import SignOutButton from "@/components/SignOutButton";
+import UserMenu from "@/components/UserMenu";
 
 const navItems: { href: string; label: string; sub: string; icon: ReactNode }[] = [
   {
@@ -111,7 +111,7 @@ export default function Sidebar() {
           </Link>
           <div className="flex items-center gap-2 shrink-0">
             <ThemeToggle className="h-8 w-8 shrink-0" />
-            <SignOutButton className="h-8 w-8 shrink-0" />
+            <UserMenu className="h-8 w-8 shrink-0" />
           </div>
         </div>
 
@@ -179,8 +179,8 @@ export default function Sidebar() {
             );
           })}
           <ThemeToggle className="h-9 w-9 shrink-0 ml-0.5" />
-          <SignOutButton className="h-9 w-9 shrink-0" />
         </nav>
+        <UserMenu className="h-9 w-9 shrink-0" />
       </header>
     </>
   );

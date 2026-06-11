@@ -22,6 +22,22 @@ export type LibraryItem = {
 
 export type TaskStatus = "todo" | "doing" | "done";
 
+export type ProgressLogEntry = {
+  id: string;
+  userId: string;
+  memberName: string;
+  content: string;
+  createdAt: string;
+};
+
+export type ProgressComment = {
+  id: string;
+  userId: string;
+  memberName: string;
+  content: string;
+  createdAt: string;
+};
+
 export type ProgressTask = {
   id: string;
   title: string;
@@ -30,6 +46,8 @@ export type ProgressTask = {
   assignee: string;
   createdAt: string;
   createdBy: string;
+  logs?: ProgressLogEntry[];
+  comments?: ProgressComment[];
 };
 
 export type User = {
@@ -39,6 +57,8 @@ export type User = {
   role: string;
   bio: string;
   focus: string[];
+  avatarUrl: string;
+  contact: string;
   createdAt: string;
 };
 

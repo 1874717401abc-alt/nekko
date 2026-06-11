@@ -15,11 +15,12 @@ export async function PUT(req: NextRequest) {
   const focus = Array.isArray(body?.focus)
     ? body.focus.filter((f: unknown) => typeof f === "string" && f.trim()).map((f: string) => f.trim())
     : undefined;
+  const contact = typeof body?.contact === "string" ? body.contact.trim() : undefined;
 
   if (displayName !== undefined && !displayName) {
     return NextResponse.json({ error: "昵称不能为空" }, { status: 400 });
   }
 
-  const updated = updateUser(user.id, { displayName, role, bio, focus });
+  const updated = updateUser(user.id, { displayName, role, bio, focus, contact });
   return NextResponse.json(updated);
 }

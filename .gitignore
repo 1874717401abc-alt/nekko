@@ -41,6 +41,9 @@ yarn-error.log*
 /data/nekko.db
 /data/nekko.db-*
 
+# user-uploaded avatars (runtime data)
+/public/uploads/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Avatar from "@/components/Avatar";
 import PageHeader from "@/components/PageHeader";
 import { HoverCard, StaggerContainer, StaggerItem } from "@/components/motion";
 import { getCurrentUser } from "@/lib/auth";
@@ -34,10 +35,16 @@ export default async function TeamPage() {
                   </Link>
                 )}
               </div>
-              <h2 className="font-serif-display text-3xl sm:text-4xl text-ink mb-2">
-                {member.displayName}
-              </h2>
+              <div className="flex items-center gap-4 mb-2">
+                <Avatar src={member.avatarUrl || undefined} name={member.displayName} size={56} />
+                <h2 className="font-serif-display text-3xl sm:text-4xl text-ink">
+                  {member.displayName}
+                </h2>
+              </div>
               {member.role && <p className="text-sm text-ink-soft mb-6">{member.role}</p>}
+              {member.contact && (
+                <p className="text-xs text-ink-soft mb-2">联系方式：{member.contact}</p>
+              )}
               {member.bio && (
                 <p className="text-sm leading-relaxed text-ink mb-8 flex-1 whitespace-pre-wrap">
                   {member.bio}

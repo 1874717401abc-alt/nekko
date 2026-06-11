@@ -10,6 +10,8 @@ type UserRow = {
   role: string;
   bio: string;
   focus: string;
+  avatar_url: string;
+  contact: string;
   created_at: string;
 };
 
@@ -21,6 +23,8 @@ function toUser(row: UserRow): User {
     role: row.role,
     bio: row.bio,
     focus: JSON.parse(row.focus || "[]"),
+    avatarUrl: row.avatar_url || "",
+    contact: row.contact || "",
     createdAt: row.created_at,
   };
 }
@@ -60,13 +64,21 @@ export function createUser(input: {
     role: "",
     bio: "",
     focus: [],
+    avatarUrl: "",
+    contact: "",
     createdAt,
   };
 }
 
 export function updateUser(
   id: string,
-  fields: { displayName?: string; role?: string; bio?: string; focus?: string[] }
+  fields: {
+    displayName?: string;
+    role?: string;
+    bio?: string;
+    focus?: string[];
+    contact?: string;
+  }
 ): User | null {
   const existing = getUserById(id);
   if (!existing) return null;
@@ -76,14 +88,25 @@ export function updateUser(
     role: fields.role ?? existing.role,
     bio: fields.bio ?? existing.bio,
     focus: fields.focus ?? existing.focus,
+    contact: fields.contact ?? existing.contact,
   };
 
   const db = getDb();
   db.prepare(
-    "UPDATE users SET display_name = ?, role = ?, bio = ?, focus = ? WHERE id = ?"
-  ).run(next.displayName, next.role, next.bio, JSON.stringify(next.focus), id);
+    "UPDATE users SET display_name = ?, role = ?, bio = ?, focus = ?, contact = ? WHERE id = ?"
+  ).run(next.displayName, next.role, next.bio, JSON.stringify(next.focus), next.contact, id);
 
   return { ...existing, ...next };
+}
+
+export function updateUserAvatar(id: string, avatarUrl: string): User | null {
+  const existing = getUserById(id);
+  if (!existing) return null;
+
+  const db = getDb();
+  db.prepare("UPDATE users SET avatar_url = ? WHERE id = ?").run(avatarUrl, id);
+
+  return { ...existing, avatarUrl };
 }
 
 export function listUsers(): User[] {

@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Avatar from "@/components/Avatar";
+import { cropImageToSquareJpeg } from "@/lib/imageCrop";
 import type { User } from "@/lib/types";
 
 export default function ProfileForm({ user }: { user: User }) {
@@ -10,9 +12,46 @@ export default function ProfileForm({ user }: { user: User }) {
   const [role, setRole] = useState(user.role);
   const [bio, setBio] = useState(user.bio);
   const [focus, setFocus] = useState(user.focus.join(", "));
+  const [contact, setContact] = useState(user.contact);
+  const [avatarUrl, setAvatarUrl] = useState(user.avatarUrl);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setAvatarUploading(true);
+    setAvatarError(null);
+
+    try {
+      const dataUrl = await cropImageToSquareJpeg(file);
+      const res = await fetch("/api/users/me/avatar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: dataUrl }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        setAvatarError(data?.error ?? "上传失败，请重试。");
+        return;
+      }
+
+      const updated = await res.json();
+      setAvatarUrl(updated.avatarUrl);
+      router.refresh();
+    } catch {
+      setAvatarError("上传失败，请重试。");
+    } finally {
+      setAvatarUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -31,6 +70,7 @@ export default function ProfileForm({ user }: { user: User }) {
           .split(/[,，]/)
           .map((f) => f.trim())
           .filter(Boolean),
+        contact: contact.trim(),
       }),
     });
 
@@ -51,6 +91,33 @@ export default function ProfileForm({ user }: { user: User }) {
       onSubmit={handleSubmit}
       className="rounded-2xl border border-line/70 bg-card p-6 sm:p-8 flex flex-col gap-5"
     >
+      <div>
+        <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+          头像
+        </label>
+        <div className="flex items-center gap-4">
+          <Avatar src={avatarUrl || undefined} name={displayName || user.displayName} size={64} />
+          <div>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={avatarUploading}
+              className="text-sm px-4 py-2 rounded-full border border-line text-ink-soft hover:text-accent hover:border-accent transition-colors disabled:opacity-50"
+            >
+              {avatarUploading ? "上传中…" : "更换头像"}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleAvatarChange}
+              className="hidden"
+            />
+            {avatarError && <p className="text-xs text-red-400 mt-1.5">{avatarError}</p>}
+          </div>
+        </div>
+      </div>
+
       <div>
         <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
           用户名
@@ -103,6 +170,18 @@ export default function ProfileForm({ user }: { user: User }) {
           value={focus}
           onChange={(e) => setFocus(e.target.value)}
           placeholder="拍摄, 剪辑, 配乐"
+          className="w-full rounded-lg border border-line bg-paper px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent"
+        />
+      </div>
+
+      <div>
+        <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+          联系方式
+        </label>
+        <input
+          value={contact}
+          onChange={(e) => setContact(e.target.value)}
+          placeholder="微信 / QQ / 邮箱等"
           className="w-full rounded-lg border border-line bg-paper px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent"
         />
       </div>

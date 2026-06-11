@@ -34,6 +34,16 @@ export function getDb(): Database.Database {
     )
   `);
 
+  const userColumns = (db.prepare("PRAGMA table_info(users)").all() as { name: string }[]).map(
+    (c) => c.name
+  );
+  if (!userColumns.includes("avatar_url")) {
+    db.exec("ALTER TABLE users ADD COLUMN avatar_url TEXT NOT NULL DEFAULT ''");
+  }
+  if (!userColumns.includes("contact")) {
+    db.exec("ALTER TABLE users ADD COLUMN contact TEXT NOT NULL DEFAULT ''");
+  }
+
   seedFromJsonFiles(db);
   migrateLegacyData(db);
 

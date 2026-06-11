@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import type { ProgressTask, TaskStatus } from "@/lib/types";
 
@@ -171,7 +172,12 @@ export default function ProgressBoard({
                       className="rounded-2xl border border-line/70 bg-card p-4"
                     >
                       <div className="flex items-start justify-between gap-2">
-                        <p className="text-sm font-medium text-ink">{task.title}</p>
+                        <Link
+                          href={`/progress/${task.id}`}
+                          className="text-sm font-medium text-ink hover:text-accent transition-colors"
+                        >
+                          {task.title}
+                        </Link>
                         <button
                           onClick={() => handleDelete(task.id)}
                           className="text-ink-soft hover:text-accent text-xs shrink-0"
