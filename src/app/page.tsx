@@ -90,7 +90,7 @@ export default async function Dashboard() {
       <PageHeader
         eyebrow={today}
         title="Nekko 工作室"
-        description="记录灵感、整理素材、跟进进度——一个只属于我们两个人的小工作室。"
+        description="灵感在此生根，故事由此发生——欢迎来到 Nekko 的创作宇宙。"
       />
 
       <FadeIn delay={0.05} className={isGuestView ? "" : "mb-20"}>
