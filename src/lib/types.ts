@@ -7,6 +7,7 @@ export type InspirationItem = {
   tags: string[];
   createdAt: string;
   createdBy: string;
+  projectId?: string;
 };
 
 export type LibraryItem = {
@@ -17,6 +18,16 @@ export type LibraryItem = {
   category: string;
   note?: string;
   addedAt: string;
+  createdBy: string;
+  projectId?: string;
+};
+
+export type Project = {
+  id: string;
+  name: string;
+  description?: string;
+  tags: string[];
+  createdAt: string;
   createdBy: string;
 };
 
@@ -48,6 +59,7 @@ export type ProgressTask = {
   createdBy: string;
   logs?: ProgressLogEntry[];
   comments?: ProgressComment[];
+  projectId?: string;
 };
 
 export type User = {

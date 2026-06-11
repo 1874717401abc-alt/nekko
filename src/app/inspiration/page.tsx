@@ -3,13 +3,14 @@ import PageHeader from "@/components/PageHeader";
 import InspirationBoard from "@/components/InspirationBoard";
 import { getCurrentUser } from "@/lib/auth";
 import { readData } from "@/lib/store";
-import type { InspirationItem } from "@/lib/types";
+import type { InspirationItem, Project } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 export default async function InspirationPage() {
-  const [items, currentUser] = await Promise.all([
+  const [items, projects, currentUser] = await Promise.all([
     readData<InspirationItem[]>("inspiration"),
+    readData<Project[]>("projects"),
     getCurrentUser(),
   ]);
 
@@ -24,7 +25,7 @@ export default async function InspirationPage() {
         title="灵感库"
         description="随手记录的链接、想法和参考素材，按标签分类，方便随时回顾。"
       />
-      <InspirationBoard initialItems={items} currentUserName={currentUser.displayName} />
+      <InspirationBoard initialItems={items} projects={projects} currentUserName={currentUser.displayName} />
     </div>
   );
 }

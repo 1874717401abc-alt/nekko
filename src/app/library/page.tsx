@@ -3,13 +3,14 @@ import PageHeader from "@/components/PageHeader";
 import LibraryList from "@/components/LibraryList";
 import { getCurrentUser } from "@/lib/auth";
 import { readData } from "@/lib/store";
-import type { LibraryItem } from "@/lib/types";
+import type { LibraryItem, Project } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 export default async function LibraryPage() {
-  const [items, currentUser] = await Promise.all([
+  const [items, projects, currentUser] = await Promise.all([
     readData<LibraryItem[]>("library"),
+    readData<Project[]>("projects"),
     getCurrentUser(),
   ]);
 
@@ -24,7 +25,7 @@ export default async function LibraryPage() {
         title="资料库"
         description="视频成片、文档、素材的链接合集，按类别整理，随取随用。"
       />
-      <LibraryList initialItems={items} currentUserName={currentUser.displayName} />
+      <LibraryList initialItems={items} projects={projects} currentUserName={currentUser.displayName} />
     </div>
   );
 }

@@ -64,6 +64,16 @@ const navItems: { href: string; label: string; sub: string; icon: ReactNode }[] 
     ),
   },
   {
+    href: "/projects",
+    label: "项目",
+    sub: "Projects",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4">
+        <path d="M3.5 6.2c0-.7.6-1.2 1.2-1.2H10l1.6 2h7.7c.7 0 1.2.5 1.2 1.2V18c0 .7-.5 1.2-1.2 1.2H4.7c-.7 0-1.2-.5-1.2-1.2Z" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  {
     href: "/team",
     label: "团队",
     sub: "Team",

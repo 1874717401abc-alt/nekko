@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import type { InspirationItem } from "@/lib/types";
+import type { InspirationItem, Project } from "@/lib/types";
 
 const easeOut = [0.22, 1, 0.36, 1] as const;
 
@@ -29,24 +30,30 @@ async function persist(items: InspirationItem[]) {
 
 export default function InspirationBoard({
   initialItems,
+  projects,
   currentUserName,
 }: {
   initialItems: InspirationItem[];
+  projects: Project[];
   currentUserName: string;
 }) {
   const [items, setItems] = useState<InspirationItem[]>(initialItems);
   const [showForm, setShowForm] = useState(false);
   const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [activeProject, setActiveProject] = useState<string>("");
 
   const [title, setTitle] = useState("");
   const [type, setType] = useState<InspirationItem["type"]>("note");
   const [url, setUrl] = useState("");
   const [note, setNote] = useState("");
   const [tags, setTags] = useState("");
+  const [projectId, setProjectId] = useState("");
 
   const allTags = Array.from(new Set(items.flatMap((i) => i.tags))).sort();
 
-  const filtered = activeTag ? items.filter((i) => i.tags.includes(activeTag)) : items;
+  const filtered = items
+    .filter((i) => (activeTag ? i.tags.includes(activeTag) : true))
+    .filter((i) => (activeProject ? i.projectId === activeProject : true));
   const sorted = [...filtered].sort(
     (a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)
   );
@@ -57,6 +64,7 @@ export default function InspirationBoard({
     setUrl("");
     setNote("");
     setTags("");
+    setProjectId("");
     setShowForm(false);
   }
 
@@ -76,6 +84,7 @@ export default function InspirationBoard({
         .filter(Boolean),
       createdAt: new Date().toISOString(),
       createdBy: currentUserName,
+      projectId: projectId || undefined,
     };
 
     const next = [newItem, ...items];
@@ -116,6 +125,20 @@ export default function InspirationBoard({
             {tag}
           </button>
         ))}
+        {projects.length > 0 && (
+          <select
+            value={activeProject}
+            onChange={(e) => setActiveProject(e.target.value)}
+            className="text-xs px-3 py-1.5 rounded-full border border-line bg-paper text-ink-soft focus:outline-none focus:border-accent"
+          >
+            <option value="">全部项目</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        )}
         <button
           onClick={() => setShowForm((v) => !v)}
           className="ml-auto text-xs px-4 py-1.5 rounded-full bg-ink text-paper hover:bg-ink/85 transition-colors"
@@ -171,6 +194,25 @@ export default function InspirationBoard({
               placeholder="排版, 参考"
             />
           </div>
+          {projects.length > 0 && (
+            <div>
+              <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+                所属项目
+              </label>
+              <select
+                value={projectId}
+                onChange={(e) => setProjectId(e.target.value)}
+                className="w-full rounded-lg border border-line bg-paper px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent"
+              >
+                <option value="">不归属项目</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           {(type === "link" || type === "image") && (
             <div className="sm:col-span-2">
               <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
@@ -251,6 +293,14 @@ export default function InspirationBoard({
               )}
               <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-2 mt-4">
                 <div className="flex flex-wrap gap-1.5">
+                  {item.projectId && projects.find((p) => p.id === item.projectId) && (
+                    <Link
+                      href={`/projects/${item.projectId}`}
+                      className="text-[11px] px-2 py-0.5 rounded-full bg-accent/10 text-accent hover:bg-accent/20"
+                    >
+                      {projects.find((p) => p.id === item.projectId)?.name}
+                    </Link>
+                  )}
                   {item.tags.map((tag) => (
                     <span
                       key={tag}

@@ -13,6 +13,7 @@ const navLinks = [
   { label: "灵感库", href: "/inspiration" },
   { label: "资料库", href: "/library" },
   { label: "进度看板", href: "/progress" },
+  { label: "项目", href: "/projects" },
   { label: "团队", href: "/team" },
 ];
 
