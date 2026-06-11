@@ -76,12 +76,23 @@ const navItems: { href: string; label: string; sub: string; icon: ReactNode }[] 
       </svg>
     ),
   },
+  {
+    href: "/profile",
+    label: "我的资料",
+    sub: "Profile",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4">
+        <circle cx="12" cy="8" r="3.5" />
+        <path d="M4.5 19.5c0-3.3 3.4-6 7.5-6s7.5 2.7 7.5 6" strokeLinecap="round" />
+      </svg>
+    ),
+  },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
 
-  if (pathname?.startsWith("/login")) {
+  if (pathname?.startsWith("/login") || pathname?.startsWith("/register")) {
     return null;
   }
 
@@ -144,11 +155,14 @@ export default function Sidebar() {
       </aside>
 
       {/* Mobile top bar */}
-      <header className="md:hidden sticky top-0 z-30 flex items-center justify-between border-b border-line bg-paper-soft/90 backdrop-blur px-5 py-4">
-        <Link href="/" className="font-serif-display italic text-2xl text-ink">
+      <header className="md:hidden sticky top-0 z-30 flex items-center gap-2 border-b border-line bg-paper-soft/90 backdrop-blur px-3 py-3">
+        <Link
+          href="/"
+          className="font-serif-display italic text-xl text-ink shrink-0 pl-1"
+        >
           Nekko
         </Link>
-        <nav className="flex items-center gap-1">
+        <nav className="flex items-center gap-0.5 overflow-x-auto flex-nowrap ml-auto min-w-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {navItems.map((item) => {
             const active =
               item.href === "/" ? pathname === "/" : pathname?.startsWith(item.href);
@@ -156,7 +170,7 @@ export default function Sidebar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`h-9 w-9 flex items-center justify-center rounded-lg ${
+                className={`h-9 w-9 shrink-0 flex items-center justify-center rounded-lg ${
                   active ? "bg-accent/10 text-accent" : "text-ink-soft"
                 }`}
               >
@@ -164,8 +178,8 @@ export default function Sidebar() {
               </Link>
             );
           })}
-          <ThemeToggle className="h-9 w-9 ml-1" />
-          <SignOutButton className="h-9 w-9" />
+          <ThemeToggle className="h-9 w-9 shrink-0 ml-0.5" />
+          <SignOutButton className="h-9 w-9 shrink-0" />
         </nav>
       </header>
     </>

@@ -18,7 +18,7 @@ export default function RootLayout({
       className="h-full antialiased"
       suppressHydrationWarning
     >
-      <body className="min-h-full flex bg-paper text-ink">
+      <body className="min-h-full flex flex-col md:flex-row bg-paper text-ink">
         <script
           dangerouslySetInnerHTML={{
             __html:

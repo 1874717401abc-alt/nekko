@@ -20,7 +20,13 @@ async function persist(tasks: ProgressTask[]) {
   });
 }
 
-export default function ProgressBoard({ initialTasks }: { initialTasks: ProgressTask[] }) {
+export default function ProgressBoard({
+  initialTasks,
+  currentUserName,
+}: {
+  initialTasks: ProgressTask[];
+  currentUserName: string;
+}) {
   const [tasks, setTasks] = useState<ProgressTask[]>(initialTasks);
   const [showForm, setShowForm] = useState(false);
 
@@ -46,6 +52,7 @@ export default function ProgressBoard({ initialTasks }: { initialTasks: Progress
       status: "todo",
       assignee: assignee.trim() || "未分配",
       createdAt: new Date().toISOString(),
+      createdBy: currentUserName,
     };
 
     const next = [...tasks, newTask];
@@ -177,11 +184,16 @@ export default function ProgressBoard({ initialTasks }: { initialTasks: Progress
                           {task.description}
                         </p>
                       )}
-                      <div className="flex items-center justify-between mt-3">
-                        <span className="text-[11px] px-2 py-0.5 rounded-full bg-paper-soft text-ink-soft">
-                          {task.assignee}
-                        </span>
-                        <div className="flex gap-1">
+                      <div className="flex flex-wrap items-center justify-between gap-2 mt-3">
+                        <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-paper-soft text-ink-soft">
+                            {task.assignee}
+                          </span>
+                          <span className="text-[11px] text-ink-soft truncate">
+                            由 {task.createdBy} 创建
+                          </span>
+                        </div>
+                        <div className="flex gap-1 shrink-0">
                           <button
                             onClick={() => moveTask(task.id, -1)}
                             disabled={col.status === "todo"}

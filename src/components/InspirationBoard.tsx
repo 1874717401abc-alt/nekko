@@ -29,8 +29,10 @@ async function persist(items: InspirationItem[]) {
 
 export default function InspirationBoard({
   initialItems,
+  currentUserName,
 }: {
   initialItems: InspirationItem[];
+  currentUserName: string;
 }) {
   const [items, setItems] = useState<InspirationItem[]>(initialItems);
   const [showForm, setShowForm] = useState(false);
@@ -73,6 +75,7 @@ export default function InspirationBoard({
         .map((t) => t.trim())
         .filter(Boolean),
       createdAt: new Date().toISOString(),
+      createdBy: currentUserName,
     };
 
     const next = [newItem, ...items];
@@ -246,7 +249,7 @@ export default function InspirationBoard({
                   {item.note}
                 </p>
               )}
-              <div className="flex items-center justify-between mt-4">
+              <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-2 mt-4">
                 <div className="flex flex-wrap gap-1.5">
                   {item.tags.map((tag) => (
                     <span
@@ -257,8 +260,8 @@ export default function InspirationBoard({
                     </span>
                   ))}
                 </div>
-                <span className="text-[11px] text-ink-soft shrink-0 ml-2">
-                  {formatDate(item.createdAt)}
+                <span className="text-[11px] text-ink-soft shrink-0 ml-auto">
+                  {item.createdBy} · {formatDate(item.createdAt)}
                 </span>
               </div>
             </motion.div>

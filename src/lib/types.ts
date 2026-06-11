@@ -6,6 +6,7 @@ export type InspirationItem = {
   note?: string;
   tags: string[];
   createdAt: string;
+  createdBy: string;
 };
 
 export type LibraryItem = {
@@ -16,6 +17,7 @@ export type LibraryItem = {
   category: string;
   note?: string;
   addedAt: string;
+  createdBy: string;
 };
 
 export type TaskStatus = "todo" | "doing" | "done";
@@ -27,19 +29,23 @@ export type ProgressTask = {
   status: TaskStatus;
   assignee: string;
   createdAt: string;
+  createdBy: string;
 };
 
-export type TeamMember = {
+export type User = {
   id: string;
-  name: string;
+  username: string;
+  displayName: string;
   role: string;
   bio: string;
   focus: string[];
+  createdAt: string;
 };
 
 export type CheckIn = {
   id: string;
-  member: string;
+  userId: string;
+  memberName: string;
   date: string; // YYYY-MM-DD
   time: string; // ISO timestamp
   note?: string;

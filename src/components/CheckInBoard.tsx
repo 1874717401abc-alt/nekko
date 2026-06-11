@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { HoverCard, StaggerContainer, StaggerItem } from "@/components/motion";
-import type { CheckIn, TeamMember } from "@/lib/types";
+import { HoverCard } from "@/components/motion";
+import type { CheckIn, User } from "@/lib/types";
 
 const easeOut = [0.22, 1, 0.36, 1] as const;
 
@@ -39,27 +39,31 @@ async function persist(checkins: CheckIn[]) {
 }
 
 export default function CheckInBoard({
-  members,
+  currentUser,
   initialCheckins,
 }: {
-  members: TeamMember[];
+  currentUser: Pick<User, "id" | "displayName" | "role">;
   initialCheckins: CheckIn[];
 }) {
   const [checkins, setCheckins] = useState<CheckIn[]>(initialCheckins);
-  const [notes, setNotes] = useState<Record<string, string>>({});
+  const [note, setNote] = useState("");
   const today = todayKey();
 
-  async function handleCheckIn(member: string) {
+  const todays = checkins.filter((c) => c.userId === currentUser.id && c.date === today);
+  const checkedIn = todays.length > 0;
+
+  async function handleCheckIn() {
     const newEntry: CheckIn = {
       id: `checkin-${crypto.randomUUID()}`,
-      member,
+      userId: currentUser.id,
+      memberName: currentUser.displayName,
       date: today,
       time: new Date().toISOString(),
-      note: notes[member]?.trim() || undefined,
+      note: note.trim() || undefined,
     };
     const next = [...checkins, newEntry];
     setCheckins(next);
-    setNotes((n) => ({ ...n, [member]: "" }));
+    setNote("");
     await persist(next);
   }
 
@@ -76,92 +80,79 @@ export default function CheckInBoard({
 
   return (
     <div>
-      <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-16">
-        {members.map((member) => {
-          const todays = checkins.filter(
-            (c) => c.member === member.name && c.date === today
-          );
-          const checkedIn = todays.length > 0;
+      <div className="mb-16">
+        <HoverCard className="rounded-2xl border border-line/70 bg-card p-6 max-w-xl">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="font-serif-display text-2xl text-ink">{currentUser.displayName}</h3>
+              {currentUser.role && <p className="text-xs text-ink-soft mt-0.5">{currentUser.role}</p>}
+            </div>
+            <motion.span
+              key={checkedIn ? "in" : "out"}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.25, ease: easeOut }}
+              className={`text-[11px] px-3 py-1 rounded-full ${
+                checkedIn ? "bg-accent/10 text-accent" : "bg-paper-soft text-ink-soft"
+              }`}
+            >
+              {checkedIn ? "今日已打卡" : "今日未打卡"}
+            </motion.span>
+          </div>
 
-          return (
-            <StaggerItem key={member.id}>
-              <HoverCard className="rounded-2xl border border-line/70 bg-card p-6 h-full">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h3 className="font-serif-display text-2xl text-ink">{member.name}</h3>
-                    <p className="text-xs text-ink-soft mt-0.5">{member.role}</p>
-                  </div>
-                  <motion.span
-                    key={checkedIn ? "in" : "out"}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.25, ease: easeOut }}
-                    className={`text-[11px] px-3 py-1 rounded-full ${
-                      checkedIn ? "bg-accent/10 text-accent" : "bg-paper-soft text-ink-soft"
-                    }`}
-                  >
-                    {checkedIn ? "今日已打卡" : "今日未打卡"}
-                  </motion.span>
-                </div>
-
-                <AnimatePresence initial={false}>
-                  {todays.length > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.3, ease: easeOut }}
-                      className="overflow-hidden"
+          <AnimatePresence initial={false}>
+            {todays.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3, ease: easeOut }}
+                className="overflow-hidden"
+              >
+                <div className="flex flex-col gap-2 mb-4">
+                  {todays.map((c) => (
+                    <div
+                      key={c.id}
+                      className="flex items-center justify-between rounded-xl bg-paper-soft px-4 py-2.5"
                     >
-                      <div className="flex flex-col gap-2 mb-4">
-                        {todays.map((c) => (
-                          <div
-                            key={c.id}
-                            className="flex items-center justify-between rounded-xl bg-paper-soft px-4 py-2.5"
-                          >
-                            <div>
-                              <span className="text-sm text-ink font-medium">
-                                {formatTime(c.time)}
-                              </span>
-                              {c.note && (
-                                <span className="ml-2 text-xs text-ink-soft">{c.note}</span>
-                              )}
-                            </div>
-                            <button
-                              onClick={() => handleUndo(c.id)}
-                              className="text-xs text-ink-soft hover:text-accent"
-                            >
-                              撤销
-                            </button>
-                          </div>
-                        ))}
+                      <div>
+                        <span className="text-sm text-ink font-medium">
+                          {formatTime(c.time)}
+                        </span>
+                        {c.note && (
+                          <span className="ml-2 text-xs text-ink-soft">{c.note}</span>
+                        )}
                       </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                <div className="flex gap-2">
-                  <input
-                    value={notes[member.name] ?? ""}
-                    onChange={(e) =>
-                      setNotes((n) => ({ ...n, [member.name]: e.target.value }))
-                    }
-                    placeholder="今天打算做什么？（可选）"
-                    className="flex-1 rounded-lg border border-line bg-paper px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent"
-                  />
-                  <motion.button
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => handleCheckIn(member.name)}
-                    className="text-sm px-5 py-2.5 rounded-full bg-accent text-paper hover:bg-accent/90 transition-colors shrink-0"
-                  >
-                    打卡
-                  </motion.button>
+                      <button
+                        onClick={() => handleUndo(c.id)}
+                        className="text-xs text-ink-soft hover:text-accent"
+                      >
+                        撤销
+                      </button>
+                    </div>
+                  ))}
                 </div>
-              </HoverCard>
-            </StaggerItem>
-          );
-        })}
-      </StaggerContainer>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <div className="flex flex-col sm:flex-row gap-2">
+            <input
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="今天打算做什么？（可选）"
+              className="flex-1 rounded-lg border border-line bg-paper px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent"
+            />
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={handleCheckIn}
+              className="text-sm px-5 py-2.5 rounded-full bg-accent text-paper hover:bg-accent/90 transition-colors shrink-0"
+            >
+              打卡
+            </motion.button>
+          </div>
+        </HoverCard>
+      </div>
 
       <section>
         <h2 className="font-serif-display text-2xl text-ink mb-4">打卡记录</h2>
@@ -190,7 +181,7 @@ export default function CheckInBoard({
                         key={c.id}
                         className="text-[11px] px-3 py-1 rounded-full bg-paper-soft text-ink-soft"
                       >
-                        {c.member} · {formatTime(c.time)}
+                        {c.memberName} · {formatTime(c.time)}
                         {c.note ? ` · ${c.note}` : ""}
                       </span>
                     ))}

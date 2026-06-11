@@ -35,7 +35,13 @@ const DocIcon = () => (
   </svg>
 );
 
-export default function LibraryList({ initialItems }: { initialItems: LibraryItem[] }) {
+export default function LibraryList({
+  initialItems,
+  currentUserName,
+}: {
+  initialItems: LibraryItem[];
+  currentUserName: string;
+}) {
   const [items, setItems] = useState<LibraryItem[]>(initialItems);
   const [showForm, setShowForm] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
@@ -71,6 +77,7 @@ export default function LibraryList({ initialItems }: { initialItems: LibraryIte
       category: category.trim() || "未分类",
       note: note.trim() || undefined,
       addedAt: new Date().toISOString(),
+      createdBy: currentUserName,
     };
 
     const next = [newItem, ...items];
@@ -211,7 +218,7 @@ export default function LibraryList({ initialItems }: { initialItems: LibraryIte
               exit={{ opacity: 0, x: -8 }}
               whileHover={{ x: 4 }}
               transition={{ duration: 0.3, ease: easeOut }}
-              className="border-b border-line/70 px-1 py-4 flex items-center gap-4"
+              className="border-b border-line/70 px-1 py-4 flex flex-wrap items-center gap-x-4 gap-y-2"
             >
               <span className="h-10 w-10 shrink-0 flex items-center justify-center rounded-xl bg-accent/10 text-accent">
                 {item.type === "video" ? <VideoIcon /> : <DocIcon />}
@@ -221,7 +228,7 @@ export default function LibraryList({ initialItems }: { initialItems: LibraryIte
                   href={item.url}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-sm font-medium text-ink hover:text-accent"
+                  className="block truncate text-sm font-medium text-ink hover:text-accent"
                 >
                   {item.title}
                 </a>
@@ -229,18 +236,20 @@ export default function LibraryList({ initialItems }: { initialItems: LibraryIte
                   <p className="mt-0.5 text-xs text-ink-soft truncate">{item.note}</p>
                 )}
               </div>
-              <span className="text-[11px] px-2.5 py-1 rounded-full bg-paper-soft text-ink-soft shrink-0">
-                {item.category}
-              </span>
-              <span className="text-[11px] text-ink-soft shrink-0 hidden sm:block">
-                {formatDate(item.addedAt)}
-              </span>
-              <button
-                onClick={() => handleDelete(item.id)}
-                className="text-ink-soft hover:text-accent text-xs shrink-0"
-              >
-                删除
-              </button>
+              <div className="flex items-center gap-2 flex-wrap shrink-0 ml-auto">
+                <span className="text-[11px] px-2.5 py-1 rounded-full bg-paper-soft text-ink-soft">
+                  {item.category}
+                </span>
+                <span className="text-[11px] text-ink-soft hidden sm:inline">
+                  {item.createdBy} · {formatDate(item.addedAt)}
+                </span>
+                <button
+                  onClick={() => handleDelete(item.id)}
+                  className="text-ink-soft hover:text-accent text-xs"
+                >
+                  删除
+                </button>
+              </div>
             </motion.div>
           ))}
         </AnimatePresence>

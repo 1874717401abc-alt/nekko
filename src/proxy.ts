@@ -1,23 +1,27 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { SESSION_COOKIE, isValidSessionToken } from "@/lib/auth";
+import { SESSION_COOKIE, verifySessionToken } from "@/lib/session";
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const token = request.cookies.get(SESSION_COOKIE)?.value;
-  const authed = isValidSessionToken(token);
-  const isLoginPage = request.nextUrl.pathname.startsWith("/login");
+  const session = await verifySessionToken(token);
+  const authed = !!session;
+
+  const isAuthPage =
+    request.nextUrl.pathname.startsWith("/login") ||
+    request.nextUrl.pathname.startsWith("/register");
   const isAuthApi = request.nextUrl.pathname.startsWith("/api/auth");
 
   if (isAuthApi) {
     return NextResponse.next();
   }
 
-  if (!authed && !isLoginPage) {
+  if (!authed && !isAuthPage) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 
-  if (authed && isLoginPage) {
+  if (authed && isAuthPage) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     return NextResponse.redirect(url);

@@ -1,12 +1,21 @@
+import { redirect } from "next/navigation";
 import PageHeader from "@/components/PageHeader";
 import ProgressBoard from "@/components/ProgressBoard";
+import { getCurrentUser } from "@/lib/auth";
 import { readData } from "@/lib/store";
 import type { ProgressTask } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProgressPage() {
-  const tasks = await readData<ProgressTask[]>("progress");
+  const [tasks, currentUser] = await Promise.all([
+    readData<ProgressTask[]>("progress"),
+    getCurrentUser(),
+  ]);
+
+  if (!currentUser) {
+    redirect("/login");
+  }
 
   return (
     <div className="px-6 sm:px-10 lg:px-16 py-14 sm:py-20 max-w-5xl mx-auto">
@@ -15,7 +24,7 @@ export default async function ProgressPage() {
         title="进度看板"
         description="待开始、进行中、已完成——清楚知道现在每个人在忙什么。"
       />
-      <ProgressBoard initialTasks={tasks} />
+      <ProgressBoard initialTasks={tasks} currentUserName={currentUser.displayName} />
     </div>
   );
 }

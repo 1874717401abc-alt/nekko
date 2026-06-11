@@ -3,7 +3,8 @@ import PageHeader from "@/components/PageHeader";
 import HomeHero from "@/components/HomeHero";
 import { FadeIn, HoverCard, StaggerContainer, StaggerItem } from "@/components/motion";
 import { readData } from "@/lib/store";
-import type { CheckIn, InspirationItem, LibraryItem, ProgressTask, TeamMember } from "@/lib/types";
+import { listUsers } from "@/lib/users";
+import type { CheckIn, InspirationItem, LibraryItem, ProgressTask } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +40,7 @@ export default async function Dashboard() {
     readData<ProgressTask[]>("progress"),
     readData<InspirationItem[]>("inspiration"),
     readData<LibraryItem[]>("library"),
-    readData<TeamMember[]>("team"),
+    Promise.resolve(listUsers()),
     readData<CheckIn[]>("checkins"),
   ]);
 
@@ -105,7 +106,7 @@ export default async function Dashboard() {
           <div className="flex flex-wrap items-center justify-center gap-2">
             {members.map((member) => {
               const entry = checkins.find(
-                (c) => c.member === member.name && c.date === todayKey()
+                (c) => c.userId === member.id && c.date === todayKey()
               );
               return (
                 <span
@@ -114,7 +115,7 @@ export default async function Dashboard() {
                     entry ? "bg-accent/10 text-accent" : "bg-paper-soft text-ink-soft"
                   }`}
                 >
-                  {member.name} {entry ? `· ${formatTime(entry.time)}` : "· 未打卡"}
+                  {member.displayName} {entry ? `· ${formatTime(entry.time)}` : "· 未打卡"}
                 </span>
               );
             })}
