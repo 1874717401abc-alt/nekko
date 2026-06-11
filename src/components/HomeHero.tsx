@@ -165,7 +165,8 @@ export default function HomeHero() {
           </div>
 
           {/* center: main player */}
-          <div className="relative aspect-video rounded-2xl overflow-hidden border border-line shadow-[0_0_90px_rgba(34,211,238,0.15)]">
+          <div className="relative rounded-2xl overflow-hidden border border-line shadow-[0_0_90px_rgba(34,211,238,0.15)]">
+            <div className="pt-[56.25%]" />
             <AnimatePresence mode="sync">
               <motion.div
                 key={slide.bg}

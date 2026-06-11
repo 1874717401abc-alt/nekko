@@ -42,7 +42,7 @@ yarn-error.log*
 /data/nekko.db-*
 
 # user-uploaded avatars (runtime data)
-/public/uploads/
+/data/uploads/
 
 # typescript
 *.tsbuildinfo

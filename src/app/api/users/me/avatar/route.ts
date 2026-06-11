@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { updateUserAvatar } from "@/lib/users";
 
-const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "avatars");
+const UPLOAD_DIR = path.join(process.cwd(), "data", "uploads", "avatars");
 const MAX_BYTES = 2 * 1024 * 1024; // 2MB
 
 export async function POST(req: NextRequest) {
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
   const filename = `${user.id}-${Date.now()}.jpg`;
   fs.writeFileSync(path.join(UPLOAD_DIR, filename), buffer);
 
-  const avatarUrl = `/uploads/avatars/${filename}`;
+  const avatarUrl = `/api/avatars/${filename}`;
   const updated = updateUserAvatar(user.id, avatarUrl);
   return NextResponse.json(updated);
 }

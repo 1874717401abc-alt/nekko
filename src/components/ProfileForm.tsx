@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Avatar from "@/components/Avatar";
-import { cropImageToSquareJpeg } from "@/lib/imageCrop";
+import AvatarCropper from "@/components/AvatarCropper";
 import type { User } from "@/lib/types";
 
 export default function ProfileForm({ user }: { user: User }) {
@@ -19,17 +19,22 @@ export default function ProfileForm({ user }: { user: User }) {
   const [error, setError] = useState<string | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
+  const [cropFile, setCropFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    setAvatarError(null);
+    setCropFile(file);
+  }
 
+  async function handleCropConfirm(dataUrl: string) {
+    setCropFile(null);
     setAvatarUploading(true);
     setAvatarError(null);
 
     try {
-      const dataUrl = await cropImageToSquareJpeg(file);
       const res = await fetch("/api/users/me/avatar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -51,6 +56,11 @@ export default function ProfileForm({ user }: { user: User }) {
       setAvatarUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
+  }
+
+  function handleCropCancel() {
+    setCropFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -87,6 +97,10 @@ export default function ProfileForm({ user }: { user: User }) {
   }
 
   return (
+    <>
+    {cropFile && (
+      <AvatarCropper file={cropFile} onCancel={handleCropCancel} onConfirm={handleCropConfirm} />
+    )}
     <form
       onSubmit={handleSubmit}
       className="rounded-2xl border border-line/70 bg-card p-6 sm:p-8 flex flex-col gap-5"
@@ -199,5 +213,6 @@ export default function ProfileForm({ user }: { user: User }) {
         </button>
       </div>
     </form>
+    </>
   );
 }
