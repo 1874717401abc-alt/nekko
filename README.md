@@ -48,7 +48,9 @@ npm run dev
 
 线上运行时，`data/nekko.db`、`data/uploads` 和 `public/uploads` 都是运行数据，不应直接提交到仓库。
 
-AI 助手通过服务端接口调用模型或 Hermes Agent，前端不会接触 API Key。对话、消息和附件提取文本会保存到 SQLite，方便按对话继续上下文。`AI_BACKEND=hermes` 时，每个 Nekko 对话会带独立 Hermes session header，Hermes 网关离线时可自动降级到 DeepSeek 直连。当前版本是只读助手，会基于工作台上下文、当前对话历史、上传文件和公开链接内容给建议，不会直接改任务、删资料或发布内容。
+AI 助手通过服务端接口调用模型或 Hermes Agent，前端不会接触 API Key。对话、消息和附件提取文本会保存到 SQLite，方便按对话继续上下文。`AI_BACKEND=hermes` 时，每个 Nekko 对话会带独立 Hermes session header，Hermes 网关离线时可自动降级到 DeepSeek 直连。
+
+Workspace Agent 支持有限白名单动作：创建项目、创建任务、创建灵感、创建资料、运行 B站内容雷达。模型只负责规划动作，服务端会按现有数据规则校验字段和权限后执行，并把执行结果写回对话。删除、改密码、登录外部平台、外部发布等高风险动作没有开放。
 
 ## 部署
 

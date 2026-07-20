@@ -248,7 +248,14 @@ export async function getAgentStatus(): Promise<AgentStatus> {
 
   const config = hermesConfig();
   const base = config.baseUrl.replace(/\/v1$/, "");
-  const baseCapabilities = ["工作台上下文", "附件文本", "公开链接", "对话记忆"];
+  const baseCapabilities = [
+    "工作台上下文",
+    "附件文本",
+    "公开链接",
+    "对话记忆",
+    "站内动作",
+    "自动内容雷达",
+  ];
 
   if (!config.apiKey) {
     return {

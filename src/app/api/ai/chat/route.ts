@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
-import { AgentRequestError, requestAgentCompletion } from "@/lib/aiAgent";
+import { AgentRequestError } from "@/lib/aiAgent";
 import {
   buildAiSystemPrompt,
   buildAiWorkspaceContext,
@@ -15,6 +15,7 @@ import {
   updateAiConversation,
 } from "@/lib/aiConversations";
 import { extractUrlAttachmentsFromText } from "@/lib/aiSources";
+import { runWorkspaceAgent } from "@/lib/workspaceAgent";
 import type { AiAttachment, AiMessage, AiMode } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -207,12 +208,12 @@ export async function POST(req: NextRequest) {
       ...recentMessages.map(messageForModel),
     ];
 
-    const completion = await requestAgentCompletion({
+    const completion = await runWorkspaceAgent({
       messages: modelMessages,
       mode,
       signal: controller.signal,
       conversationId: conversation.id,
-      userId: user.id,
+      user,
     });
 
     const assistantMessage = appendAiMessage({
@@ -238,6 +239,7 @@ export async function POST(req: NextRequest) {
       model: completion.model,
       backend: completion.backend,
       fallbackFrom: completion.fallbackFrom,
+      actions: completion.actions,
     });
   } catch (error) {
     if (error instanceof AgentRequestError) {
