@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
+import { ExternalLink, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
 import { createItem, deleteItem, patchItem } from "@/lib/clientData";
 import type { InspirationItem, Project } from "@/lib/types";
 
@@ -184,12 +185,12 @@ export default function InspirationBoard({
 
   return (
     <div>
-      <div className="flex flex-wrap items-center gap-2 mb-8">
+      <div className="mb-5 flex flex-wrap items-center gap-2 border-b border-line pb-4">
         {error && <p className="w-full text-xs text-red-400">{error}</p>}
         {radarMessage && <p className="w-full text-xs text-accent">{radarMessage}</p>}
         <button
           onClick={() => setActiveTag(null)}
-          className={`text-xs px-3.5 py-1.5 rounded-full border transition-colors ${
+          className={`text-xs px-3.5 py-1.5 rounded border transition-colors ${
             activeTag === null
               ? "border-accent bg-accent/10 text-accent"
               : "border-line text-ink-soft hover:border-accent/40"
@@ -201,7 +202,7 @@ export default function InspirationBoard({
           <button
             key={tag}
             onClick={() => setActiveTag(tag)}
-            className={`text-xs px-3.5 py-1.5 rounded-full border transition-colors ${
+            className={`text-xs px-3.5 py-1.5 rounded border transition-colors ${
               activeTag === tag
                 ? "border-accent bg-accent/10 text-accent"
                 : "border-line text-ink-soft hover:border-accent/40"
@@ -214,7 +215,7 @@ export default function InspirationBoard({
           <select
             value={activeProject}
             onChange={(e) => setActiveProject(e.target.value)}
-            className="text-xs px-3 py-1.5 rounded-full border border-line bg-paper text-ink-soft focus:outline-none focus:border-accent"
+            className="text-xs px-3 py-1.5 rounded border border-line bg-paper text-ink-soft focus:outline-none focus:border-accent"
           >
             <option value="">全部项目</option>
             {projects.map((p) => (
@@ -228,16 +229,18 @@ export default function InspirationBoard({
           <button
             onClick={runRadar}
             disabled={radarRunning}
-            className="ml-auto text-xs px-4 py-1.5 rounded-full border border-accent/50 bg-accent/10 text-accent transition-colors hover:bg-accent/15 disabled:opacity-50"
+            className="ml-auto inline-flex h-9 items-center gap-2 rounded-md border border-accent/40 bg-accent/10 px-3 text-xs font-medium text-accent transition-colors hover:bg-accent/15 disabled:opacity-50"
           >
+            <Sparkles className="h-4 w-4" />
             {radarRunning ? "Agent 采集中" : "Agent 采集今日灵感"}
           </button>
         )}
         <button
           onClick={() => setShowForm((v) => !v)}
-          className={`${canRunRadar ? "" : "ml-auto"} text-xs px-4 py-1.5 rounded-full bg-ink text-paper hover:bg-ink/85 transition-colors`}
+          className={`${canRunRadar ? "" : "ml-auto"} inline-flex h-9 items-center gap-2 rounded-md bg-ink px-3 text-xs font-medium text-paper hover:bg-ink/85 transition-colors`}
         >
-          {showForm ? "取消" : "+ 新建灵感"}
+          <Plus className={`h-4 w-4 ${showForm ? "rotate-45" : ""}`} />
+          {showForm ? "取消" : "新建灵感"}
         </button>
       </div>
 
@@ -249,10 +252,10 @@ export default function InspirationBoard({
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.35, ease: easeOut }}
-            className="mb-8 overflow-hidden rounded-2xl border border-line/70 bg-card p-6 grid grid-cols-1 sm:grid-cols-2 gap-4"
+            className="mb-6 grid grid-cols-1 gap-4 overflow-hidden rounded-lg border border-line bg-card p-5 sm:grid-cols-2"
           >
           <div className="sm:col-span-2">
-            <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+            <label className="block text-xs  text-ink-soft mb-1.5">
               标题
             </label>
             <input
@@ -264,7 +267,7 @@ export default function InspirationBoard({
             />
           </div>
           <div>
-            <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+            <label className="block text-xs  text-ink-soft mb-1.5">
               类型
             </label>
             <select
@@ -278,7 +281,7 @@ export default function InspirationBoard({
             </select>
           </div>
           <div>
-            <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+            <label className="block text-xs  text-ink-soft mb-1.5">
               标签（逗号分隔）
             </label>
             <input
@@ -290,7 +293,7 @@ export default function InspirationBoard({
           </div>
           {projects.length > 0 && (
             <div>
-              <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+              <label className="block text-xs  text-ink-soft mb-1.5">
                 所属项目
               </label>
               <select
@@ -309,7 +312,7 @@ export default function InspirationBoard({
           )}
           {(type === "link" || type === "image") && (
             <div className="sm:col-span-2">
-              <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+              <label className="block text-xs  text-ink-soft mb-1.5">
                 链接地址
               </label>
               <input
@@ -321,7 +324,7 @@ export default function InspirationBoard({
             </div>
           )}
           <div className="sm:col-span-2">
-            <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+            <label className="block text-xs  text-ink-soft mb-1.5">
               备注
             </label>
             <textarea
@@ -336,7 +339,7 @@ export default function InspirationBoard({
             <button
               type="submit"
               disabled={saving}
-              className="text-sm px-5 py-2.5 rounded-full bg-accent text-paper hover:bg-accent/90 transition-colors"
+              className="text-sm px-5 py-2.5 rounded bg-accent text-paper hover:bg-accent/90 transition-colors"
             >
               {saving ? "保存中…" : "保存"}
             </button>
@@ -345,7 +348,7 @@ export default function InspirationBoard({
         )}
       </AnimatePresence>
 
-      <div className="columns-1 sm:columns-2 lg:columns-3 gap-5 space-y-5">
+      <div className="columns-1 gap-4 space-y-4 sm:columns-2 lg:columns-3 2xl:columns-4">
         <AnimatePresence initial={false}>
           {sorted.map((item) => (
             <motion.div
@@ -354,14 +357,13 @@ export default function InspirationBoard({
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96 }}
-              whileHover={{ y: -3 }}
               transition={{ duration: 0.35, ease: easeOut }}
-              className="break-inside-avoid rounded-2xl border border-line/70 bg-card p-5"
+              className="break-inside-avoid rounded-lg border border-line bg-card p-4"
             >
               {editingId === item.id ? (
                 <div className="flex flex-col gap-3">
                   <div>
-                    <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+                    <label className="block text-xs  text-ink-soft mb-1.5">
                       标题
                     </label>
                     <input
@@ -372,7 +374,7 @@ export default function InspirationBoard({
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+                      <label className="block text-xs  text-ink-soft mb-1.5">
                         类型
                       </label>
                       <select
@@ -386,7 +388,7 @@ export default function InspirationBoard({
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+                      <label className="block text-xs  text-ink-soft mb-1.5">
                         标签（逗号分隔）
                       </label>
                       <input
@@ -398,7 +400,7 @@ export default function InspirationBoard({
                   </div>
                   {projects.length > 0 && (
                     <div>
-                      <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+                      <label className="block text-xs  text-ink-soft mb-1.5">
                         所属项目
                       </label>
                       <select
@@ -417,7 +419,7 @@ export default function InspirationBoard({
                   )}
                   {(editType === "link" || editType === "image") && (
                     <div>
-                      <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+                      <label className="block text-xs  text-ink-soft mb-1.5">
                         链接地址
                       </label>
                       <input
@@ -429,7 +431,7 @@ export default function InspirationBoard({
                     </div>
                   )}
                   <div>
-                    <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+                    <label className="block text-xs  text-ink-soft mb-1.5">
                       备注
                     </label>
                     <textarea
@@ -443,14 +445,14 @@ export default function InspirationBoard({
 	                    <button
 	                      onClick={cancelEdit}
 	                      disabled={pendingId === item.id}
-	                      className="text-xs px-4 py-2 rounded-full border border-line text-ink-soft hover:border-accent/50 hover:text-accent transition-colors"
+	                      className="text-xs px-4 py-2 rounded border border-line text-ink-soft hover:border-accent/50 hover:text-accent transition-colors"
 	                    >
                       取消
                     </button>
 	                    <button
 	                      onClick={() => handleEditSave(item.id)}
 	                      disabled={pendingId === item.id}
-	                      className="text-xs px-4 py-2 rounded-full bg-accent text-paper hover:bg-accent/90 transition-colors disabled:opacity-50"
+	                      className="text-xs px-4 py-2 rounded bg-accent text-paper hover:bg-accent/90 transition-colors disabled:opacity-50"
 	                    >
 	                      {pendingId === item.id ? "保存中…" : "保存"}
 	                    </button>
@@ -459,35 +461,38 @@ export default function InspirationBoard({
               ) : (
                 <>
                   <div className="flex items-start justify-between gap-3 mb-2">
-                    <span className="text-[11px] uppercase tracking-[0.2em] text-accent">
+                    <span className="text-[11px] font-medium text-accent">
                       {typeLabel[item.type]}
                     </span>
                     <div className="flex items-center gap-3 shrink-0">
                       <button
                         onClick={() => startEdit(item)}
-                        className="text-ink-soft hover:text-accent text-xs"
+                        className="flex h-8 w-8 items-center justify-center rounded-md text-ink-soft hover:bg-paper-soft hover:text-accent"
+                        aria-label={`编辑 ${item.title}`}
+                        title="编辑"
                       >
-                        编辑
+                        <Pencil className="h-3.5 w-3.5" />
                       </button>
 	                      <button
 	                        onClick={() => handleDelete(item.id)}
 	                        disabled={pendingId === item.id}
-	                        className="text-ink-soft hover:text-accent text-xs disabled:opacity-40"
-	                        aria-label="删除"
+	                        className="flex h-8 w-8 items-center justify-center rounded-md text-ink-soft hover:bg-red-400/10 hover:text-red-500 disabled:opacity-40"
+	                        aria-label={`删除 ${item.title}`}
+	                        title="删除"
 	                      >
-	                        {pendingId === item.id ? "处理中" : "删除"}
+	                        {pendingId === item.id ? <span className="text-[10px]">...</span> : <Trash2 className="h-3.5 w-3.5" />}
 	                      </button>
                     </div>
                   </div>
-                  <h3 className="font-serif-display text-lg text-ink mb-1.5">{item.title}</h3>
+                  <h3 className="mb-1.5 text-base font-semibold leading-6 text-ink">{item.title}</h3>
                   {item.url && (
                     <a
                       href={item.url}
                       target="_blank"
                       rel="noreferrer"
-                      className="block text-xs text-accent break-all mb-1.5 hover:underline"
+                      className="mb-2 inline-flex items-center gap-1 text-xs text-accent hover:underline"
                     >
-                      {item.url}
+                      打开来源 <ExternalLink className="h-3 w-3" />
                     </a>
                   )}
                   {item.note && (
@@ -500,7 +505,7 @@ export default function InspirationBoard({
                       {item.projectId && projects.find((p) => p.id === item.projectId) && (
                         <Link
                           href={`/projects/${item.projectId}`}
-                          className="text-[11px] px-2 py-0.5 rounded-full bg-accent/10 text-accent hover:bg-accent/20"
+                          className="text-[11px] px-2 py-0.5 rounded bg-accent/10 text-accent hover:bg-accent/20"
                         >
                           {projects.find((p) => p.id === item.projectId)?.name}
                         </Link>
@@ -508,7 +513,7 @@ export default function InspirationBoard({
                       {item.tags.map((tag) => (
                         <span
                           key={tag}
-                          className="text-[11px] px-2 py-0.5 rounded-full bg-paper-soft text-ink-soft"
+                          className="text-[11px] px-2 py-0.5 rounded bg-paper-soft text-ink-soft"
                         >
                           {tag}
                         </span>

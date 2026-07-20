@@ -1,8 +1,18 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import {
+  ArrowRight,
+  Bot,
+  CalendarClock,
+  CheckCircle2,
+  Clock3,
+  FolderOpen,
+  Lightbulb,
+  ListTodo,
+  Users,
+} from "lucide-react";
 import PageHeader from "@/components/PageHeader";
 import HomeHero from "@/components/HomeHero";
-import { FadeIn, HoverCard, StaggerContainer, StaggerItem } from "@/components/motion";
 import { readData } from "@/lib/store";
 import { listUsers } from "@/lib/users";
 import { getCurrentUser, isGuest } from "@/lib/auth";
@@ -95,7 +105,12 @@ export default async function Dashboard() {
 
   const todo = tasks.filter((t) => t.status === "todo");
   const doing = tasks.filter((t) => t.status === "doing");
-  const done = tasks.filter((t) => t.status === "done");
+  const overdue = tasks.filter(
+    (task) => task.status !== "done" && task.dueDate && task.dueDate < todayKey()
+  );
+  const checkedInToday = members.filter((member) =>
+    checkins.some((entry) => entry.userId === member.id && entry.date === todayKey())
+  ).length;
 
   const recentInspiration = [...inspiration]
     .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
@@ -122,239 +137,186 @@ export default async function Dashboard() {
   });
 
   const stats = [
-    { label: "进行中", value: doing.length, href: "/progress" },
-    { label: "待开始", value: todo.length, href: "/progress" },
-    { label: "已完成", value: done.length, href: "/progress" },
-    { label: "灵感收藏", value: inspiration.length, href: "/inspiration" },
-    { label: "资料文件", value: library.length, href: "/library" },
+    { label: "进行中", value: doing.length, detail: `${todo.length} 项待开始`, href: "/progress", icon: ListTodo },
+    { label: "逾期任务", value: overdue.length, detail: overdue.length > 0 ? "需要优先处理" : "当前无逾期", href: "/progress", icon: CalendarClock },
+    { label: "今日到岗", value: `${checkedInToday}/${members.length}`, detail: "团队打卡", href: "/checkin", icon: Users },
+    { label: "灵感库", value: inspiration.length, detail: "可用创作线索", href: "/inspiration", icon: Lightbulb },
+    { label: "资料库", value: library.length, detail: "已归档资料", href: "/library", icon: FolderOpen },
   ];
 
+  if (isGuestView) {
+    return (
+      <div className="mx-auto min-h-screen max-w-[1540px] px-4 pb-24 pt-6 sm:px-6 sm:pt-8 md:pb-10 lg:px-10">
+        <PageHeader
+          eyebrow="Nekko Studio"
+          title="Nekko 工作室"
+          description="内容策划、制作与持续运营。"
+        />
+        <HomeHero heroImages={heroImages} heroContent={heroContent} />
+      </div>
+    );
+  }
+
   return (
-    <div className="px-6 sm:px-10 lg:px-16 py-14 sm:py-20 max-w-6xl mx-auto">
+    <div className="mx-auto min-h-screen max-w-[1540px] px-4 pb-24 pt-6 sm:px-6 sm:pt-8 md:pb-10 lg:px-10">
       <PageHeader
         eyebrow={today}
-        title="Nekko 工作室"
-        description="灵感在此生根，故事由此发生——欢迎来到 Nekko 的创作宇宙。"
+        title={`早上好，${currentUser.displayName}`}
+        description="工作室今日任务、内容资产和团队状态总览。"
+        action={
+          <Link
+            href="/agent"
+            className="inline-flex h-10 items-center gap-2 rounded-md bg-accent px-4 text-sm font-medium text-white"
+          >
+            <Bot className="h-4 w-4" /> 打开 AI 工作台
+          </Link>
+        }
       />
-
-      <FadeIn delay={0.05} className={isGuestView ? "" : "mb-20"}>
-        <HomeHero heroImages={heroImages} heroContent={heroContent} />
-      </FadeIn>
-
-      {!isGuestView && (
-      <>
-      {/* Slim summary bar: stats + check-in */}
-      <FadeIn delay={0.15} className="mb-20">
-        <div className="flex flex-col items-center gap-6">
-          <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
-            {stats.map((stat) => (
-              <Link
-                key={stat.label}
-                href={stat.href}
-                className="group flex items-baseline gap-2"
-              >
-                <span className="font-serif-display text-2xl text-ink transition-colors group-hover:text-accent">
-                  {stat.value}
-                </span>
-                <span className="text-[11px] uppercase tracking-[0.2em] text-ink-soft">
-                  {stat.label}
-                </span>
-              </Link>
-            ))}
-          </div>
-
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            {members.map((member) => {
-              const entry = checkins.find(
-                (c) => c.userId === member.id && c.date === todayKey()
-              );
-              return (
-                <span
-                  key={member.id}
-                  className={`text-xs px-3 py-1.5 rounded-full ${
-                    entry ? "bg-accent/10 text-accent" : "bg-paper-soft text-ink-soft"
-                  }`}
-                >
-                  {member.displayName} {entry ? `· ${formatTime(entry.time)}` : "· 未打卡"}
-                </span>
-              );
-            })}
+      <section className="grid grid-cols-2 overflow-hidden rounded-lg border border-line bg-line sm:grid-cols-3 xl:grid-cols-5">
+        {stats.map((stat, index) => {
+          const Icon = stat.icon;
+          return (
             <Link
-              href="/checkin"
-              className="text-[11px] uppercase tracking-[0.2em] text-accent ml-1"
+              key={stat.label}
+              href={stat.href}
+              className={`group bg-card p-4 transition-colors hover:bg-paper-soft sm:p-5 ${index === stats.length - 1 ? "col-span-2 sm:col-span-1" : ""}`}
             >
-              去打卡 →
+              <div className="flex items-center justify-between">
+                <Icon className="h-4 w-4 text-ink-soft group-hover:text-accent" />
+                <ArrowRight className="h-3.5 w-3.5 text-ink-soft opacity-0 transition-opacity group-hover:opacity-100" />
+              </div>
+              <p className="mt-4 text-2xl font-semibold text-ink">{stat.value}</p>
+              <p className="mt-1 text-xs font-medium text-ink">{stat.label}</p>
+              <p className="mt-1 text-[11px] text-ink-soft">{stat.detail}</p>
             </Link>
-          </div>
-        </div>
-      </FadeIn>
+          );
+        })}
+      </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-16">
-        {/* Tasks in progress */}
-        <section>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="font-serif-display text-2xl text-ink">正在进行</h2>
-            <Link href="/progress" className="text-xs uppercase tracking-[0.2em] text-accent">
-              查看看板 →
+      <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.75fr)]">
+        <section className="overflow-hidden rounded-lg border border-line bg-card">
+          <div className="flex items-center justify-between border-b border-line px-4 py-3.5 sm:px-5">
+            <div className="flex items-center gap-2">
+              <ListTodo className="h-4 w-4 text-accent" />
+              <h2 className="text-sm font-semibold text-ink">当前任务</h2>
+            </div>
+            <Link href="/progress" className="flex items-center gap-1 text-xs text-ink-soft hover:text-accent">
+              全部任务 <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
-          <StaggerContainer className="flex flex-col gap-4">
-            {[...doing, ...todo].slice(0, 5).map((task) => (
-              <StaggerItem key={task.id}>
-                <HoverCard className="px-1 py-3 flex items-start justify-between gap-4 border-b border-line/70">
-                  <div>
-                    <p className="text-sm font-medium text-ink">{task.title}</p>
-                    {task.description && (
-                      <p className="mt-1 text-xs text-ink-soft leading-relaxed">
-                        {task.description}
-                      </p>
-                    )}
+          <div className="divide-y divide-line">
+            {[...overdue, ...doing.filter((task) => !overdue.some((item) => item.id === task.id)), ...todo]
+              .slice(0, 7)
+              .map((task) => (
+                <Link key={task.id} href={`/progress/${task.id}`} className="grid gap-2 px-4 py-3.5 hover:bg-paper-soft sm:grid-cols-[minmax(0,1fr)_110px_90px] sm:items-center sm:px-5">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-ink">{task.title}</p>
+                    <p className="mt-1 truncate text-xs text-ink-soft">{task.description || "暂无任务说明"}</p>
                   </div>
-                  <div className="flex flex-col items-end gap-1.5 shrink-0">
-                    <span
-                      className={`text-[11px] px-2.5 py-1 rounded-full ${
-                        task.status === "doing"
-                          ? "bg-accent/10 text-accent"
-                          : "bg-paper-soft text-ink-soft"
-                      }`}
-                    >
-                      {statusLabel[task.status]}
-                    </span>
-                    <span className="text-[11px] text-ink-soft">{task.assignee}</span>
-                  </div>
-                </HoverCard>
-              </StaggerItem>
-            ))}
+                  <span className="text-xs text-ink-soft">{task.assignee}</span>
+                  <span className={`text-xs sm:text-right ${task.dueDate && task.dueDate < todayKey() && task.status !== "done" ? "text-red-500" : "text-ink-soft"}`}>
+                    {task.dueDate ? formatDueDate(task.dueDate) : statusLabel[task.status]}
+                  </span>
+                </Link>
+              ))}
             {doing.length + todo.length === 0 && (
-              <p className="text-sm text-ink-soft">暂无待办任务，去看板里加一个吧。</p>
+              <p className="px-5 py-12 text-center text-sm text-ink-soft">暂无未完成任务</p>
             )}
-          </StaggerContainer>
+          </div>
         </section>
 
-        {/* Upcoming + activity */}
-        <div className="flex flex-col gap-16">
-          <section>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="font-serif-display text-2xl text-ink">近期截止</h2>
-              <Link href="/progress" className="text-xs uppercase tracking-[0.2em] text-accent">
-                查看任务 →
-              </Link>
+        <div className="grid gap-6">
+          <section className="overflow-hidden rounded-lg border border-line bg-card">
+            <div className="flex items-center justify-between border-b border-line px-4 py-3.5">
+              <div className="flex items-center gap-2">
+                <Clock3 className="h-4 w-4 text-accent" />
+                <h2 className="text-sm font-semibold text-ink">近期截止</h2>
+              </div>
+              <span className="text-xs text-ink-soft">{upcomingTasks.length} 项</span>
             </div>
-            <StaggerContainer className="flex flex-col gap-4">
+            <div className="divide-y divide-line">
               {upcomingTasks.map((task) => (
-                <StaggerItem key={task.id}>
-                  <HoverCard className="px-1 py-3 border-b border-line/70">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <Link
-                          href={`/progress/${task.id}`}
-                          className="text-sm font-medium text-ink hover:text-accent"
-                        >
-                          {task.title}
-                        </Link>
-                        <p className="mt-1 text-xs text-ink-soft">
-                          {task.assignee} · {task.priority === "high" ? "高优先级" : "普通优先级"}
-                        </p>
-                      </div>
-                      <span className="text-[11px] px-2.5 py-1 rounded-full bg-paper-soft text-ink-soft shrink-0">
-                        {formatDueDate(task.dueDate!)}
-                      </span>
-                    </div>
-                  </HoverCard>
-                </StaggerItem>
+                <Link key={task.id} href={`/progress/${task.id}`} className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-paper-soft">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-ink">{task.title}</p>
+                    <p className="mt-0.5 text-[11px] text-ink-soft">{task.assignee}</p>
+                  </div>
+                  <span className="shrink-0 text-xs text-ink-soft">{formatDueDate(task.dueDate!)}</span>
+                </Link>
               ))}
-              {upcomingTasks.length === 0 && (
-                <p className="text-sm text-ink-soft">暂无设置截止日期的未完成任务。</p>
+              {upcomingTasks.length === 0 && <p className="px-4 py-8 text-center text-xs text-ink-soft">暂无近期截止</p>}
+            </div>
+          </section>
+
+          <section className="overflow-hidden rounded-lg border border-line bg-card">
+            <div className="flex items-center justify-between border-b border-line px-4 py-3.5">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-accent" />
+                <h2 className="text-sm font-semibold text-ink">今日到岗</h2>
+              </div>
+              <Link href="/checkin" className="text-xs text-ink-soft hover:text-accent">打卡</Link>
+            </div>
+            <div className="divide-y divide-line">
+              {members.slice(0, 6).map((member) => {
+                const entry = checkins.find((item) => item.userId === member.id && item.date === todayKey());
+                return (
+                  <div key={member.id} className="flex items-center justify-between px-4 py-3 text-sm">
+                    <span className="text-ink">{member.displayName}</span>
+                    <span className={entry ? "text-emerald-500" : "text-ink-soft"}>{entry ? formatTime(entry.time) : "未打卡"}</span>
+                  </div>
+                );
+              })}
+              {members.length > 6 && (
+                <Link
+                  href="/team"
+                  className="flex items-center justify-between px-4 py-3 text-xs text-ink-soft hover:text-accent"
+                >
+                  查看全部 {members.length} 位成员
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
               )}
-            </StaggerContainer>
-          </section>
-
-          <section>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="font-serif-display text-2xl text-ink">团队动态</h2>
             </div>
-            <StaggerContainer className="flex flex-col gap-4">
-              {recentActivity.map((event) => (
-                <StaggerItem key={event.id}>
-                  <HoverCard className="px-1 py-3 border-b border-line/70">
-                    <p className="text-sm font-medium text-ink">{event.summary}</p>
-                    <p className="mt-1 text-[11px] text-ink-soft">
-                      {formatActivityTime(event.createdAt)}
-                    </p>
-                  </HoverCard>
-                </StaggerItem>
-              ))}
-              {recentActivity.length === 0 && (
-                <p className="text-sm text-ink-soft">还没有团队动态。</p>
-              )}
-            </StaggerContainer>
-          </section>
-        </div>
-
-        {/* Recent inspiration + library */}
-        <div className="flex flex-col gap-16 lg:col-span-2">
-          <section>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="font-serif-display text-2xl text-ink">最新灵感</h2>
-              <Link href="/inspiration" className="text-xs uppercase tracking-[0.2em] text-accent">
-                进入灵感库 →
-              </Link>
-            </div>
-            <StaggerContainer className="flex flex-col gap-4">
-              {recentInspiration.map((item) => (
-                <StaggerItem key={item.id}>
-                  <HoverCard className="px-1 py-3 border-b border-line/70">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm font-medium text-ink">{item.title}</p>
-                      <span className="text-[11px] text-ink-soft shrink-0">
-                        {formatDate(item.createdAt)}
-                      </span>
-                    </div>
-                    {item.note && (
-                      <p className="mt-1 text-xs text-ink-soft leading-relaxed line-clamp-2">
-                        {item.note}
-                      </p>
-                    )}
-                  </HoverCard>
-                </StaggerItem>
-              ))}
-            </StaggerContainer>
-          </section>
-
-          <section>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="font-serif-display text-2xl text-ink">最近资料</h2>
-              <Link href="/library" className="text-xs uppercase tracking-[0.2em] text-accent">
-                进入资料库 →
-              </Link>
-            </div>
-            <StaggerContainer className="flex flex-col gap-4">
-              {recentLibrary.map((item) => (
-                <StaggerItem key={item.id}>
-                  <HoverCard>
-                    <a
-                      href={item.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-center justify-between gap-3 px-1 py-3 border-b border-line/70 transition-colors hover:text-accent"
-                    >
-                      <div>
-                        <p className="text-sm font-medium text-ink">{item.title}</p>
-                        <p className="mt-1 text-xs text-ink-soft">{item.category}</p>
-                      </div>
-                      <span className="text-[11px] uppercase tracking-[0.2em] text-ink-soft shrink-0">
-                        {item.type === "video" ? "视频" : "文档"}
-                      </span>
-                    </a>
-                  </HoverCard>
-                </StaggerItem>
-              ))}
-            </StaggerContainer>
           </section>
         </div>
       </div>
-      </>
-      )}
+
+      <div className="mt-6 grid gap-6 lg:grid-cols-3">
+        {[
+          {
+            title: "最新灵感",
+            href: "/inspiration",
+            items: recentInspiration.map((item) => ({ id: item.id, title: item.title, meta: formatDate(item.createdAt) })),
+          },
+          {
+            title: "最近资料",
+            href: "/library",
+            items: recentLibrary.map((item) => ({ id: item.id, title: item.title, meta: item.category || item.type })),
+          },
+          {
+            title: "团队动态",
+            href: "/team",
+            items: recentActivity.map((item) => ({ id: item.id, title: item.summary, meta: formatActivityTime(item.createdAt) })),
+          },
+        ].map((section) => (
+          <section key={section.title} className="overflow-hidden rounded-lg border border-line bg-card">
+            <div className="flex items-center justify-between border-b border-line px-4 py-3.5">
+              <h2 className="text-sm font-semibold text-ink">{section.title}</h2>
+              <Link href={section.href} className="text-ink-soft hover:text-accent" aria-label={`查看${section.title}`}>
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+            <div className="divide-y divide-line">
+              {section.items.slice(0, 4).map((item) => (
+                <div key={item.id} className="px-4 py-3">
+                  <p className="line-clamp-1 text-sm text-ink">{item.title}</p>
+                  <p className="mt-1 text-[11px] text-ink-soft">{item.meta}</p>
+                </div>
+              ))}
+              {section.items.length === 0 && <p className="px-4 py-8 text-center text-xs text-ink-soft">暂无内容</p>}
+            </div>
+          </section>
+        ))}
+      </div>
     </div>
   );
 }

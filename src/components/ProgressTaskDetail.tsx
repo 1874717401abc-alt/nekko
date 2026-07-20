@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { MessageSquareText, Pencil, Save, Send, SquareActivity } from "lucide-react";
 import Avatar from "@/components/Avatar";
 import { appendTaskEntry, patchItem } from "@/lib/clientData";
 import type { ProgressComment, ProgressLogEntry, ProgressTask, TaskPriority } from "@/lib/types";
@@ -120,20 +121,20 @@ export default function ProgressTaskDetail({
   }
 
   return (
-    <div className="mt-8 flex flex-col gap-10">
-      {error && <p className="text-xs text-red-400">{error}</p>}
+    <div className="mt-6 grid gap-5 lg:grid-cols-2">
+      {error && <p className="text-xs text-red-400 lg:col-span-2">{error}</p>}
       {/* Section 1 & 2: title + description */}
       <motion.section
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: easeOut }}
-        className="rounded-2xl border border-line/70 bg-card p-6 sm:p-8"
+        className="rounded-lg border border-line/70 bg-card p-5 sm:p-6 lg:col-span-2"
       >
         {editing ? (
           <form onSubmit={handleSaveInfo} className="flex flex-col gap-4">
             <div>
-              <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
-                项目名称
+              <label className="block text-xs  text-ink-soft mb-1.5">
+                任务名称
               </label>
               <input
                 value={title}
@@ -143,8 +144,8 @@ export default function ProgressTaskDetail({
               />
             </div>
             <div>
-              <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
-                项目内容
+              <label className="block text-xs  text-ink-soft mb-1.5">
+                任务说明
               </label>
               <textarea
                 value={description}
@@ -155,7 +156,7 @@ export default function ProgressTaskDetail({
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+                <label className="block text-xs  text-ink-soft mb-1.5">
                   负责人
                 </label>
                 <select
@@ -172,7 +173,7 @@ export default function ProgressTaskDetail({
                 </select>
               </div>
               <div>
-                <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+                <label className="block text-xs  text-ink-soft mb-1.5">
                   优先级
                 </label>
                 <select
@@ -186,7 +187,7 @@ export default function ProgressTaskDetail({
                 </select>
               </div>
               <div>
-                <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+                <label className="block text-xs  text-ink-soft mb-1.5">
                   截止日期
                 </label>
                 <input
@@ -208,15 +209,16 @@ export default function ProgressTaskDetail({
                   setDueDate(task.dueDate ?? "");
                   setEditing(false);
                 }}
-                className="text-sm px-4 py-2 rounded-full border border-line text-ink-soft hover:text-accent hover:border-accent transition-colors"
+                className="text-sm px-4 py-2 rounded border border-line text-ink-soft hover:text-accent hover:border-accent transition-colors"
               >
                 取消
               </button>
               <button
                 type="submit"
                 disabled={savingInfo}
-                className="text-sm px-5 py-2 rounded-full bg-accent text-paper hover:bg-accent/90 transition-colors disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm text-paper transition-colors hover:bg-accent/90 disabled:opacity-50"
               >
+                <Save size={14} aria-hidden="true" />
                 {savingInfo ? "保存中…" : "保存"}
               </button>
             </div>
@@ -224,17 +226,18 @@ export default function ProgressTaskDetail({
         ) : (
           <div>
             <div className="flex items-start justify-between gap-4 mb-3">
-              <span className="text-[11px] px-2.5 py-1 rounded-full bg-paper-soft text-ink-soft uppercase tracking-[0.2em]">
+              <span className="text-[11px] px-2.5 py-1 rounded bg-paper-soft text-ink-soft ">
                 {statusLabels[task.status] ?? task.status}
               </span>
               <button
                 onClick={() => setEditing(true)}
-                className="text-xs text-ink-soft hover:text-accent transition-colors shrink-0"
+                className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border border-line px-3 text-xs text-ink-soft transition-colors hover:border-accent hover:text-accent"
               >
+                <Pencil size={13} aria-hidden="true" />
                 编辑
               </button>
             </div>
-            <h1 className="font-serif-display text-3xl sm:text-4xl text-ink mb-4">{task.title}</h1>
+            <h1 className="mb-3 text-2xl font-semibold text-ink">{task.title}</h1>
             <p className="text-sm leading-relaxed text-ink whitespace-pre-wrap">
               {task.description || "暂无项目内容描述。"}
             </p>
@@ -251,9 +254,12 @@ export default function ProgressTaskDetail({
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.05, ease: easeOut }}
-        className="rounded-2xl border border-line/70 bg-card p-6 sm:p-8"
+        className="rounded-lg border border-line/70 bg-card p-5 sm:p-6"
       >
-        <h2 className="font-serif-display text-xl text-ink mb-4">任务进度</h2>
+        <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-ink">
+          <SquareActivity size={16} aria-hidden="true" />
+          任务进度
+        </h2>
 
         <form onSubmit={handleAddLog} className="flex flex-col gap-3 mb-6">
           <textarea
@@ -267,8 +273,9 @@ export default function ProgressTaskDetail({
             <button
               type="submit"
               disabled={postingLog || !logInput.trim()}
-              className="text-sm px-5 py-2 rounded-full bg-ink text-paper hover:bg-ink/85 transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-md bg-ink px-4 py-2 text-sm text-paper transition-colors hover:bg-ink/85 disabled:opacity-50"
             >
+              <Send size={14} aria-hidden="true" />
               {postingLog ? "添加中…" : "添加进度"}
             </button>
           </div>
@@ -304,9 +311,12 @@ export default function ProgressTaskDetail({
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.1, ease: easeOut }}
-        className="rounded-2xl border border-line/70 bg-card p-6 sm:p-8"
+        className="rounded-lg border border-line/70 bg-card p-5 sm:p-6"
       >
-        <h2 className="font-serif-display text-xl text-ink mb-4">评论区</h2>
+        <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-ink">
+          <MessageSquareText size={16} aria-hidden="true" />
+          协作评论
+        </h2>
 
         <form onSubmit={handleAddComment} className="flex flex-col gap-3 mb-6">
           <textarea
@@ -320,8 +330,9 @@ export default function ProgressTaskDetail({
             <button
               type="submit"
               disabled={postingComment || !commentInput.trim()}
-              className="text-sm px-5 py-2 rounded-full bg-ink text-paper hover:bg-ink/85 transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-md bg-ink px-4 py-2 text-sm text-paper transition-colors hover:bg-ink/85 disabled:opacity-50"
             >
+              <Send size={14} aria-hidden="true" />
               {postingComment ? "发送中…" : "发送评论"}
             </button>
           </div>

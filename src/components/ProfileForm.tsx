@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Camera, Save, UserRound } from "lucide-react";
 import Avatar from "@/components/Avatar";
 import AvatarCropper from "@/components/AvatarCropper";
 import type { User } from "@/lib/types";
@@ -78,7 +79,7 @@ export default function ProfileForm({ user }: { user: User }) {
         bio: bio.trim(),
         focus: focus
           .split(/[,，]/)
-          .map((f) => f.trim())
+          .map((item) => item.trim())
           .filter(Boolean),
         contact: contact.trim(),
       }),
@@ -98,26 +99,39 @@ export default function ProfileForm({ user }: { user: User }) {
 
   return (
     <>
-    {cropFile && (
-      <AvatarCropper file={cropFile} onCancel={handleCropCancel} onConfirm={handleCropConfirm} />
-    )}
-    <form
-      onSubmit={handleSubmit}
-      className="rounded-2xl border border-line/70 bg-card p-6 sm:p-8 flex flex-col gap-5"
-    >
-      <div>
-        <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
-          头像
-        </label>
-        <div className="flex items-center gap-4">
-          <Avatar src={avatarUrl || undefined} name={displayName || user.displayName} size={64} />
-          <div>
+      {cropFile && (
+        <AvatarCropper file={cropFile} onCancel={handleCropCancel} onConfirm={handleCropConfirm} />
+      )}
+      <form
+        onSubmit={handleSubmit}
+        className="grid overflow-hidden rounded-lg border border-line/70 bg-card lg:grid-cols-[260px_minmax(0,1fr)]"
+      >
+        <aside className="border-b border-line/70 bg-paper-soft/45 p-5 sm:p-6 lg:border-b-0 lg:border-r">
+          <div className="mb-5 flex items-center gap-2 text-xs font-medium text-ink-soft">
+            <UserRound size={15} aria-hidden="true" />
+            账号身份
+          </div>
+          <div className="flex items-center gap-4 lg:flex-col lg:items-start">
+            <Avatar
+              src={avatarUrl || undefined}
+              name={displayName || user.displayName}
+              size={76}
+            />
+            <div className="min-w-0">
+              <p className="truncate text-base font-semibold text-ink">
+                {displayName || user.displayName}
+              </p>
+              <p className="mt-0.5 truncate text-xs text-ink-soft">@{user.username}</p>
+            </div>
+          </div>
+          <div className="mt-5">
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={avatarUploading}
-              className="text-sm px-4 py-2 rounded-full border border-line text-ink-soft hover:text-accent hover:border-accent transition-colors disabled:opacity-50"
+              className="inline-flex h-9 items-center gap-2 rounded-md border border-line bg-card px-3 text-xs font-medium text-ink-soft transition-colors hover:border-accent hover:text-accent disabled:opacity-50"
             >
+              <Camera size={14} aria-hidden="true" />
               {avatarUploading ? "上传中…" : "更换头像"}
             </button>
             <input
@@ -127,92 +141,88 @@ export default function ProfileForm({ user }: { user: User }) {
               onChange={handleAvatarChange}
               className="hidden"
             />
-            {avatarError && <p className="text-xs text-red-400 mt-1.5">{avatarError}</p>}
+            {avatarError && <p className="mt-2 text-xs text-red-400">{avatarError}</p>}
+          </div>
+          <p className="mt-5 border-t border-line/70 pt-4 text-xs leading-5 text-ink-soft">
+            头像与资料会同步显示在团队、评论和任务记录中。
+          </p>
+        </aside>
+
+        <div className="p-5 sm:p-6 lg:p-8">
+          <div className="mb-6">
+            <h2 className="text-base font-semibold text-ink">成员资料</h2>
+            <p className="mt-1 text-xs text-ink-soft">维护团队内部可见的职责与联系方式。</p>
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-ink-soft">昵称</label>
+              <input
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                required
+                className="w-full rounded-md border border-line bg-paper px-3.5 py-2.5 text-sm focus:border-accent focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-ink-soft">角色 / 职责</label>
+              <input
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                placeholder="例如：策划 / 出镜 / 剪辑"
+                className="w-full rounded-md border border-line bg-paper px-3.5 py-2.5 text-sm focus:border-accent focus:outline-none"
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="mb-1.5 block text-xs font-medium text-ink-soft">简介</label>
+              <textarea
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                rows={4}
+                placeholder="介绍一下自己……"
+                className="w-full resize-none rounded-md border border-line bg-paper px-3.5 py-2.5 text-sm focus:border-accent focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-ink-soft">专长标签</label>
+              <input
+                value={focus}
+                onChange={(e) => setFocus(e.target.value)}
+                placeholder="拍摄, 剪辑, 配乐"
+                className="w-full rounded-md border border-line bg-paper px-3.5 py-2.5 text-sm focus:border-accent focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-ink-soft">联系方式</label>
+              <input
+                value={contact}
+                onChange={(e) => setContact(e.target.value)}
+                placeholder="微信 / QQ / 邮箱等"
+                className="w-full rounded-md border border-line bg-paper px-3.5 py-2.5 text-sm focus:border-accent focus:outline-none"
+              />
+            </div>
+          </div>
+
+          <div className="mt-6 flex min-h-9 flex-wrap items-center justify-between gap-3 border-t border-line/70 pt-5">
+            <div aria-live="polite">
+              {error && <p className="text-xs text-red-400">{error}</p>}
+              {saved && !error && <p className="text-xs text-accent">资料已保存。</p>}
+            </div>
+            <button
+              type="submit"
+              disabled={saving}
+              className="inline-flex h-9 items-center gap-2 rounded-md bg-accent px-4 text-sm font-medium text-paper transition-colors hover:bg-accent/90 disabled:opacity-50"
+            >
+              <Save size={15} aria-hidden="true" />
+              {saving ? "保存中…" : "保存资料"}
+            </button>
           </div>
         </div>
-      </div>
-
-      <div>
-        <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
-          用户名
-        </label>
-        <p className="text-sm text-ink-soft">{user.username}（不可修改）</p>
-      </div>
-
-      <div>
-        <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
-          昵称
-        </label>
-        <input
-          value={displayName}
-          onChange={(e) => setDisplayName(e.target.value)}
-          required
-          className="w-full rounded-lg border border-line bg-paper px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent"
-        />
-      </div>
-
-      <div>
-        <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
-          角色 / 职责
-        </label>
-        <input
-          value={role}
-          onChange={(e) => setRole(e.target.value)}
-          placeholder="例如：策划 / 出镜 / 剪辑"
-          className="w-full rounded-lg border border-line bg-paper px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent"
-        />
-      </div>
-
-      <div>
-        <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
-          简介
-        </label>
-        <textarea
-          value={bio}
-          onChange={(e) => setBio(e.target.value)}
-          rows={4}
-          placeholder="介绍一下自己……"
-          className="w-full rounded-lg border border-line bg-paper px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent resize-none"
-        />
-      </div>
-
-      <div>
-        <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
-          专长标签（逗号分隔）
-        </label>
-        <input
-          value={focus}
-          onChange={(e) => setFocus(e.target.value)}
-          placeholder="拍摄, 剪辑, 配乐"
-          className="w-full rounded-lg border border-line bg-paper px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent"
-        />
-      </div>
-
-      <div>
-        <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
-          联系方式
-        </label>
-        <input
-          value={contact}
-          onChange={(e) => setContact(e.target.value)}
-          placeholder="微信 / QQ / 邮箱等"
-          className="w-full rounded-lg border border-line bg-paper px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent"
-        />
-      </div>
-
-      {error && <p className="text-xs text-red-400">{error}</p>}
-      {saved && !error && <p className="text-xs text-accent">已保存。</p>}
-
-      <div className="flex justify-end">
-        <button
-          type="submit"
-          disabled={saving}
-          className="text-sm px-5 py-2.5 rounded-full bg-accent text-paper hover:bg-accent/90 transition-colors disabled:opacity-50"
-        >
-          {saving ? "保存中…" : "保存"}
-        </button>
-      </div>
-    </form>
+      </form>
     </>
   );
 }

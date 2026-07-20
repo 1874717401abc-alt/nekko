@@ -27,7 +27,7 @@ export default async function AdminPage() {
   const heroContent = mergeHeroContent(heroContentRaw);
 
   return (
-    <div className="px-6 sm:px-10 lg:px-16 py-14 sm:py-20 max-w-4xl mx-auto">
+    <div className="mx-auto min-h-screen max-w-[1280px] px-4 pb-24 pt-6 sm:px-6 sm:pt-8 md:pb-10 lg:px-10">
       <PageHeader
         eyebrow="Console"
         title="管理控制台"

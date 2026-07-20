@@ -1,7 +1,7 @@
 import Link from "next/link";
+import { Settings } from "lucide-react";
 import Avatar from "@/components/Avatar";
 import PageHeader from "@/components/PageHeader";
-import { HoverCard, StaggerContainer, StaggerItem } from "@/components/motion";
 import { getCurrentUser } from "@/lib/auth";
 import { listUsers } from "@/lib/users";
 
@@ -11,64 +11,61 @@ export default async function TeamPage() {
   const [members, currentUser] = await Promise.all([listUsers(), getCurrentUser()]);
 
   return (
-    <div className="px-6 sm:px-10 lg:px-16 py-14 sm:py-20 max-w-5xl mx-auto">
+    <div className="mx-auto min-h-screen max-w-[1540px] px-4 pb-24 pt-6 sm:px-6 sm:pt-8 md:pb-10 lg:px-10">
       <PageHeader
         eyebrow="Team"
         title="团队"
         description={`${members.length} 位成员，一起把内容做好。`}
       />
 
-      <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {members.map((member, idx) => (
-          <StaggerItem key={member.id}>
-            <HoverCard className="rounded-2xl border border-line/70 bg-card p-8 sm:p-10 h-full flex flex-col">
-              <div className="flex items-start justify-between gap-4 mb-4">
-                <span className="text-[11px] uppercase tracking-[0.3em] text-accent">
-                  {String(idx + 1).padStart(2, "0")}
-                </span>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {members.map((member) => (
+            <section key={member.id} className="flex min-h-44 flex-col rounded-lg border border-line bg-card p-5">
+              <div className="mb-5 flex items-start justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <Avatar src={member.avatarUrl || undefined} name={member.displayName} size={48} />
+                  <div className="min-w-0">
+                    <h2 className="truncate text-base font-semibold text-ink">{member.displayName}</h2>
+                    <p className="mt-0.5 truncate text-xs text-ink-soft">{member.role || "工作室成员"}</p>
+                  </div>
+                </div>
                 {currentUser?.id === member.id && (
                   <Link
                     href="/profile"
-                    className="text-[11px] uppercase tracking-[0.2em] text-accent hover:underline"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-ink-soft hover:bg-paper-soft hover:text-accent"
+                    aria-label="编辑我的资料"
+                    title="编辑我的资料"
                   >
-                    编辑我的资料 →
+                    <Settings className="h-4 w-4" />
                   </Link>
                 )}
               </div>
-              <div className="flex items-center gap-4 mb-2">
-                <Avatar src={member.avatarUrl || undefined} name={member.displayName} size={56} />
-                <h2 className="font-serif-display text-3xl sm:text-4xl text-ink">
-                  {member.displayName}
-                </h2>
-              </div>
-              {member.role && <p className="text-sm text-ink-soft mb-6">{member.role}</p>}
               {member.contact && (
-                <p className="text-xs text-ink-soft mb-2">联系方式：{member.contact}</p>
+                <p className="mb-3 text-xs text-ink-soft">{member.contact}</p>
               )}
               {member.bio && (
-                <p className="text-sm leading-relaxed text-ink mb-8 flex-1 whitespace-pre-wrap">
+                <p className="mb-5 flex-1 whitespace-pre-wrap text-sm leading-6 text-ink">
                   {member.bio}
                 </p>
               )}
               {member.focus.length > 0 && (
-                <div className="flex flex-wrap gap-2">
+                <div className="mt-auto flex flex-wrap gap-1.5 border-t border-line pt-4">
                   {member.focus.map((f) => (
                     <span
                       key={f}
-                      className="text-[11px] px-3 py-1 rounded-full bg-paper-soft text-ink-soft"
+                      className="rounded bg-paper-soft px-2 py-1 text-[11px] text-ink-soft"
                     >
                       {f}
                     </span>
                   ))}
                 </div>
               )}
-            </HoverCard>
-          </StaggerItem>
+            </section>
         ))}
         {members.length === 0 && (
           <p className="text-sm text-ink-soft">还没有成员，邀请大家来注册吧。</p>
         )}
-      </StaggerContainer>
+      </div>
     </div>
   );
 }

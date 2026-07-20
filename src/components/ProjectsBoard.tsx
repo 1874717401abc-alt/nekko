@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
+import { Plus, Search, Trash2 } from "lucide-react";
 import { createItem, deleteItem } from "@/lib/clientData";
 import type { InspirationItem, LibraryItem, Project, ProgressTask } from "@/lib/types";
 
@@ -115,21 +116,19 @@ export default function ProjectsBoard({
 
   return (
     <div>
-      <div className="flex flex-wrap items-end gap-3 mb-8">
+      <div className="mb-5 flex flex-wrap items-end gap-3 border-b border-line pb-4">
         {error && <p className="w-full text-xs text-red-400">{error}</p>}
-        <div className="flex-1 min-w-[180px]">
-          <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
-            关键词搜索
-          </label>
+        <div className="relative min-w-[220px] flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-soft" />
           <input
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             placeholder="搜索项目名称、简介或标签"
-            className="w-full rounded-lg border border-line bg-paper px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent"
+            className="h-10 w-full rounded-md border border-line bg-paper pl-9 pr-3 text-sm focus:border-accent focus:outline-none"
           />
         </div>
         <div>
-          <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+          <label className="block text-xs  text-ink-soft mb-1.5">
             起始日期
           </label>
           <input
@@ -140,7 +139,7 @@ export default function ProjectsBoard({
           />
         </div>
         <div>
-          <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+          <label className="block text-xs  text-ink-soft mb-1.5">
             结束日期
           </label>
           <input
@@ -152,9 +151,10 @@ export default function ProjectsBoard({
         </div>
         <button
           onClick={() => setShowForm((v) => !v)}
-          className="text-xs px-4 py-2.5 rounded-full bg-ink text-paper hover:bg-ink/85 transition-colors"
+          className="inline-flex h-10 items-center gap-2 rounded-md bg-ink px-3 text-xs font-medium text-paper hover:bg-ink/85 transition-colors"
         >
-          {showForm ? "取消" : "+ 新建项目"}
+          <Plus className={`h-4 w-4 ${showForm ? "rotate-45" : ""}`} />
+          {showForm ? "取消" : "新建项目"}
         </button>
       </div>
 
@@ -166,10 +166,10 @@ export default function ProjectsBoard({
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.35, ease: easeOut }}
-            className="mb-8 overflow-hidden rounded-2xl border border-line/70 bg-card p-6 grid grid-cols-1 sm:grid-cols-2 gap-4"
+            className="mb-6 grid grid-cols-1 gap-4 overflow-hidden rounded-lg border border-line bg-card p-5 sm:grid-cols-2"
           >
             <div className="sm:col-span-2">
-              <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+              <label className="block text-xs  text-ink-soft mb-1.5">
                 项目名称
               </label>
               <input
@@ -181,7 +181,7 @@ export default function ProjectsBoard({
               />
             </div>
             <div className="sm:col-span-2">
-              <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+              <label className="block text-xs  text-ink-soft mb-1.5">
                 项目简介
               </label>
               <textarea
@@ -193,7 +193,7 @@ export default function ProjectsBoard({
               />
             </div>
             <div className="sm:col-span-2">
-              <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+              <label className="block text-xs  text-ink-soft mb-1.5">
                 关键词（逗号分隔）
               </label>
               <input
@@ -207,7 +207,7 @@ export default function ProjectsBoard({
               <button
                 type="submit"
                 disabled={saving}
-                className="text-sm px-5 py-2.5 rounded-full bg-accent text-paper hover:bg-accent/90 transition-colors"
+                className="text-sm px-5 py-2.5 rounded bg-accent text-paper hover:bg-accent/90 transition-colors"
               >
                 {saving ? "保存中…" : "保存"}
               </button>
@@ -216,7 +216,7 @@ export default function ProjectsBoard({
         )}
       </AnimatePresence>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
         <AnimatePresence initial={false}>
           {sorted.map((project) => {
             const c = counts(project.id);
@@ -227,24 +227,24 @@ export default function ProjectsBoard({
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.96 }}
-                whileHover={{ y: -3 }}
                 transition={{ duration: 0.35, ease: easeOut }}
-                className="rounded-2xl border border-line/70 bg-card p-5 flex flex-col"
+                className="flex min-h-48 flex-col rounded-lg border border-line bg-card p-5"
               >
                 <div className="flex items-start justify-between gap-3 mb-2">
                   <Link
                     href={`/projects/${project.id}`}
-                    className="font-serif-display text-lg text-ink hover:text-accent transition-colors"
+                    className="text-base font-semibold leading-6 text-ink transition-colors hover:text-accent"
                   >
                     {project.name}
                   </Link>
                   <button
                     onClick={() => handleDelete(project.id)}
                     disabled={pendingId === project.id}
-                    className="text-ink-soft hover:text-accent text-xs shrink-0 disabled:opacity-40"
-                    aria-label="删除"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-ink-soft hover:bg-red-400/10 hover:text-red-500 disabled:opacity-40"
+                    aria-label={`删除 ${project.name}`}
+                    title="删除项目"
                   >
-                    {pendingId === project.id ? "处理中" : "删除"}
+                    {pendingId === project.id ? <span className="text-[10px]">...</span> : <Trash2 className="h-3.5 w-3.5" />}
                   </button>
                 </div>
                 {project.description && (
@@ -257,7 +257,7 @@ export default function ProjectsBoard({
                     {project.tags.map((tag) => (
                       <span
                         key={tag}
-                        className="text-[11px] px-2 py-0.5 rounded-full bg-paper-soft text-ink-soft"
+                        className="text-[11px] px-2 py-0.5 rounded bg-paper-soft text-ink-soft"
                       >
                         {tag}
                       </span>

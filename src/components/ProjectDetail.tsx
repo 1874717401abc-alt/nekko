@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { ArrowUpRight, Edit3, Plus, Trash2 } from "lucide-react";
 import { createItem, deleteItem, patchItem } from "@/lib/clientData";
 import type {
   InspirationItem,
@@ -169,14 +170,14 @@ export default function ProjectDetail({
       className="mt-6"
     >
       {error && <p className="mb-4 text-xs text-red-400">{error}</p>}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-10">
+      <div className="mb-6 flex flex-col gap-4 border-b border-line/70 pb-6 sm:flex-row sm:items-start sm:justify-between">
         {editing ? (
           <form onSubmit={handleSave} className="flex-1 flex flex-col gap-3">
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              className="w-full rounded-lg border border-line bg-paper px-3.5 py-2.5 text-lg font-serif-display focus:outline-none focus:border-accent"
+              className="w-full rounded-md border border-line bg-paper px-3.5 py-2.5 text-lg font-semibold focus:border-accent focus:outline-none"
             />
             <textarea
               value={description}
@@ -189,7 +190,7 @@ export default function ProjectDetail({
               <button
                 type="submit"
                 disabled={saving}
-                className="text-xs px-4 py-2 rounded-full bg-accent text-paper hover:bg-accent/90 transition-colors disabled:opacity-50"
+                className="text-xs px-4 py-2 rounded bg-accent text-paper hover:bg-accent/90 transition-colors disabled:opacity-50"
               >
                 {saving ? "保存中…" : "保存"}
               </button>
@@ -200,7 +201,7 @@ export default function ProjectDetail({
                   setDescription(project.description ?? "");
                   setEditing(false);
                 }}
-                className="text-xs px-4 py-2 rounded-full border border-line text-ink-soft hover:border-accent hover:text-accent transition-colors"
+                className="text-xs px-4 py-2 rounded border border-line text-ink-soft hover:border-accent hover:text-accent transition-colors"
               >
                 取消
               </button>
@@ -208,7 +209,7 @@ export default function ProjectDetail({
           </form>
         ) : (
           <div>
-            <h1 className="font-serif-display text-3xl text-ink mb-2">{project.name}</h1>
+            <h1 className="mb-2 text-2xl font-semibold text-ink sm:text-3xl">{project.name}</h1>
             {project.description && (
               <p className="text-sm text-ink-soft leading-relaxed max-w-xl mb-2">
                 {project.description}
@@ -219,14 +220,14 @@ export default function ProjectDetail({
                 {project.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="text-[11px] px-2 py-0.5 rounded-full bg-paper-soft text-ink-soft"
+                    className="text-[11px] px-2 py-0.5 rounded bg-paper-soft text-ink-soft"
                   >
                     {tag}
                   </span>
                 ))}
               </div>
             )}
-            <p className="text-[11px] uppercase tracking-[0.2em] text-ink-soft">
+            <p className="text-[11px]  text-ink-soft">
               创建于 {formatDate(project.createdAt)} · {project.createdBy}
             </p>
           </div>
@@ -235,25 +236,30 @@ export default function ProjectDetail({
           <div className="flex gap-2 shrink-0">
             <button
               onClick={() => setEditing(true)}
-              className="text-xs px-4 py-2 rounded-full border border-line text-ink-soft hover:border-accent hover:text-accent transition-colors"
+              className="inline-flex h-9 items-center gap-2 rounded-md border border-line px-3 text-xs text-ink-soft transition-colors hover:border-accent hover:text-accent"
             >
+              <Edit3 size={14} aria-hidden="true" />
               编辑
             </button>
             <button
               onClick={handleDelete}
               disabled={saving}
-              className="text-xs px-4 py-2 rounded-full border border-line text-ink-soft hover:border-accent hover:text-accent transition-colors"
+              className="inline-flex h-9 items-center gap-2 rounded-md border border-line px-3 text-xs text-ink-soft transition-colors hover:border-red-400 hover:text-red-500"
             >
+              <Trash2 size={14} aria-hidden="true" />
               删除项目
             </button>
           </div>
         )}
       </div>
 
-      <section className="rounded-2xl border border-line/70 bg-card p-5 sm:p-6 mb-10">
+      <section className="mb-6 rounded-lg border border-line/70 bg-card p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
-          <h2 className="font-serif-display text-xl text-ink">快速添加</h2>
-          <div className="flex rounded-full border border-line bg-paper-soft p-1">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-ink">
+            <Plus size={16} aria-hidden="true" />
+            快速添加
+          </h2>
+          <div className="flex rounded border border-line bg-paper-soft p-1">
             {[
               ["task", "任务"],
               ["library", "资料"],
@@ -266,7 +272,7 @@ export default function ProjectDetail({
                   setQuickKind(value as QuickKind);
                   resetQuickForm();
                 }}
-                className={`rounded-full px-3 py-1 text-xs transition-colors ${
+                className={`rounded px-3 py-1 text-xs transition-colors ${
                   quickKind === value ? "bg-accent text-paper" : "text-ink-soft hover:text-ink"
                 }`}
               >
@@ -363,26 +369,27 @@ export default function ProjectDetail({
             <button
               type="submit"
               disabled={quickSaving}
-              className="text-sm px-5 py-2.5 rounded-full bg-accent text-paper hover:bg-accent/90 transition-colors disabled:opacity-50"
+              className="inline-flex h-9 items-center gap-2 rounded-md bg-accent px-4 text-sm font-medium text-paper transition-colors hover:bg-accent/90 disabled:opacity-50"
             >
+              <Plus size={15} aria-hidden="true" />
               {quickSaving ? "保存中…" : "添加到项目"}
             </button>
           </div>
         </form>
       </section>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-10">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
         <section>
           <div className="flex items-baseline justify-between mb-4">
-            <h2 className="font-serif-display text-xl text-ink">灵感</h2>
-            <Link href="/inspiration" className="text-[11px] uppercase tracking-[0.2em] text-accent">
-              灵感库 →
+            <h2 className="text-sm font-semibold text-ink">灵感</h2>
+            <Link href="/inspiration" className="inline-flex items-center gap-1 text-[11px] text-accent">
+              灵感库 <ArrowUpRight size={12} aria-hidden="true" />
             </Link>
           </div>
           <div className="flex flex-col gap-3">
             {myInspiration.map((item) => (
-              <div key={item.id} className="rounded-2xl border border-line/70 bg-card p-4">
-                <span className="text-[11px] uppercase tracking-[0.2em] text-accent">
+              <div key={item.id} className="rounded-lg border border-line/70 bg-card p-4">
+                <span className="text-[11px]  text-accent">
                   {typeLabel[item.type]}
                 </span>
                 <p className="text-sm font-medium text-ink mt-1">{item.title}</p>
@@ -408,15 +415,15 @@ export default function ProjectDetail({
 
         <section>
           <div className="flex items-baseline justify-between mb-4">
-            <h2 className="font-serif-display text-xl text-ink">资料</h2>
-            <Link href="/library" className="text-[11px] uppercase tracking-[0.2em] text-accent">
-              资料库 →
+            <h2 className="text-sm font-semibold text-ink">资料</h2>
+            <Link href="/library" className="inline-flex items-center gap-1 text-[11px] text-accent">
+              资料库 <ArrowUpRight size={12} aria-hidden="true" />
             </Link>
           </div>
           <div className="flex flex-col gap-3">
             {myLibrary.map((item) => (
-              <div key={item.id} className="rounded-2xl border border-line/70 bg-card p-4">
-                <span className="text-[11px] px-2 py-0.5 rounded-full bg-paper-soft text-ink-soft">
+              <div key={item.id} className="rounded-lg border border-line/70 bg-card p-4">
+                <span className="text-[11px] px-2 py-0.5 rounded bg-paper-soft text-ink-soft">
                   {item.category}
                 </span>
                 <a
@@ -439,9 +446,9 @@ export default function ProjectDetail({
 
         <section>
           <div className="flex items-baseline justify-between mb-4">
-            <h2 className="font-serif-display text-xl text-ink">任务</h2>
-            <Link href="/progress" className="text-[11px] uppercase tracking-[0.2em] text-accent">
-              进度看板 →
+            <h2 className="text-sm font-semibold text-ink">任务</h2>
+            <Link href="/progress" className="inline-flex items-center gap-1 text-[11px] text-accent">
+              进度看板 <ArrowUpRight size={12} aria-hidden="true" />
             </Link>
           </div>
           <div className="flex flex-col gap-3">
@@ -449,9 +456,9 @@ export default function ProjectDetail({
               <Link
                 key={task.id}
                 href={`/progress/${task.id}`}
-                className="block rounded-2xl border border-line/70 bg-card p-4 hover:border-accent/50 transition-colors"
+                className="block rounded-lg border border-line/70 bg-card p-4 hover:border-accent/50 transition-colors"
               >
-                <span className="text-[11px] px-2 py-0.5 rounded-full bg-paper-soft text-ink-soft">
+                <span className="text-[11px] px-2 py-0.5 rounded bg-paper-soft text-ink-soft">
                   {statusLabel[task.status]}
                 </span>
                 <p className="text-sm font-medium text-ink mt-1.5">{task.title}</p>

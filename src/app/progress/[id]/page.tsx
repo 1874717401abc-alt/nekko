@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import ProgressTaskDetail from "@/components/ProgressTaskDetail";
 import { getCurrentUser } from "@/lib/auth";
 import { readData } from "@/lib/store";
@@ -30,12 +31,13 @@ export default async function ProgressTaskPage({
   }
 
   return (
-    <div className="px-6 sm:px-10 lg:px-16 py-14 sm:py-20 max-w-3xl mx-auto">
+    <div className="mx-auto min-h-screen max-w-[1180px] px-4 pb-24 pt-6 sm:px-6 sm:pt-8 md:pb-10 lg:px-10">
       <Link
         href="/progress"
-        className="text-[11px] uppercase tracking-[0.2em] text-accent hover:underline"
+        className="inline-flex items-center gap-1.5 text-xs text-accent hover:underline"
       >
-        ← 返回进度看板
+        <ArrowLeft size={13} aria-hidden="true" />
+        返回进度看板
       </Link>
       <ProgressTaskDetail
         initialTask={task}

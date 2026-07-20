@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
+import { FileText, Pencil, Plus, Trash2, Video } from "lucide-react";
 import { createItem, deleteItem, patchItem } from "@/lib/clientData";
 import type { LibraryItem, Project } from "@/lib/types";
 
@@ -14,20 +15,6 @@ function formatDate(iso: string) {
     day: "numeric",
   });
 }
-
-const VideoIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" className="h-4 w-4">
-    <rect x="2.5" y="5" width="14" height="14" rx="2" />
-    <path d="M16.5 10.5 21 7.5v9l-4.5-3Z" strokeLinejoin="round" />
-  </svg>
-);
-
-const DocIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" className="h-4 w-4">
-    <path d="M6 2.5h8l4 4V20a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1Z" strokeLinejoin="round" />
-    <path d="M14 2.5V7h4" strokeLinejoin="round" />
-  </svg>
-);
 
 export default function LibraryList({
   initialItems,
@@ -154,11 +141,11 @@ export default function LibraryList({
 
   return (
     <div>
-      <div className="flex flex-wrap items-center gap-2 mb-8">
+      <div className="mb-5 flex flex-wrap items-center gap-2 border-b border-line pb-4">
         {error && <p className="w-full text-xs text-red-400">{error}</p>}
         <button
           onClick={() => setActiveCategory(null)}
-          className={`text-xs px-3.5 py-1.5 rounded-full border transition-colors ${
+          className={`text-xs px-3.5 py-1.5 rounded border transition-colors ${
             activeCategory === null
               ? "border-accent bg-accent/10 text-accent"
               : "border-line text-ink-soft hover:border-accent/40"
@@ -170,7 +157,7 @@ export default function LibraryList({
           <button
             key={cat}
             onClick={() => setActiveCategory(cat)}
-            className={`text-xs px-3.5 py-1.5 rounded-full border transition-colors ${
+            className={`text-xs px-3.5 py-1.5 rounded border transition-colors ${
               activeCategory === cat
                 ? "border-accent bg-accent/10 text-accent"
                 : "border-line text-ink-soft hover:border-accent/40"
@@ -183,7 +170,7 @@ export default function LibraryList({
           <select
             value={activeProject}
             onChange={(e) => setActiveProject(e.target.value)}
-            className="text-xs px-3 py-1.5 rounded-full border border-line bg-paper text-ink-soft focus:outline-none focus:border-accent"
+            className="text-xs px-3 py-1.5 rounded border border-line bg-paper text-ink-soft focus:outline-none focus:border-accent"
           >
             <option value="">全部项目</option>
             {projects.map((p) => (
@@ -195,9 +182,10 @@ export default function LibraryList({
         )}
         <button
           onClick={() => setShowForm((v) => !v)}
-          className="ml-auto text-xs px-4 py-1.5 rounded-full bg-ink text-paper hover:bg-ink/85 transition-colors"
+          className="ml-auto inline-flex h-9 items-center gap-2 rounded-md bg-ink px-3 text-xs font-medium text-paper hover:bg-ink/85 transition-colors"
         >
-          {showForm ? "取消" : "+ 新建条目"}
+          <Plus className={`h-4 w-4 ${showForm ? "rotate-45" : ""}`} />
+          {showForm ? "取消" : "新建资料"}
         </button>
       </div>
 
@@ -209,10 +197,10 @@ export default function LibraryList({
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.35, ease: easeOut }}
-            className="mb-8 overflow-hidden rounded-2xl border border-line/70 bg-card p-6 grid grid-cols-1 sm:grid-cols-2 gap-4"
+            className="mb-6 grid grid-cols-1 gap-4 overflow-hidden rounded-lg border border-line bg-card p-5 sm:grid-cols-2"
           >
           <div className="sm:col-span-2">
-            <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+            <label className="block text-xs  text-ink-soft mb-1.5">
               标题
             </label>
             <input
@@ -224,7 +212,7 @@ export default function LibraryList({
             />
           </div>
           <div>
-            <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+            <label className="block text-xs  text-ink-soft mb-1.5">
               类型
             </label>
             <select
@@ -237,7 +225,7 @@ export default function LibraryList({
             </select>
           </div>
           <div>
-            <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+            <label className="block text-xs  text-ink-soft mb-1.5">
               分类
             </label>
             <input
@@ -249,7 +237,7 @@ export default function LibraryList({
           </div>
           {projects.length > 0 && (
             <div>
-              <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+              <label className="block text-xs  text-ink-soft mb-1.5">
                 所属项目
               </label>
               <select
@@ -267,7 +255,7 @@ export default function LibraryList({
             </div>
           )}
           <div className="sm:col-span-2">
-            <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+            <label className="block text-xs  text-ink-soft mb-1.5">
               链接地址
             </label>
             <input
@@ -279,7 +267,7 @@ export default function LibraryList({
             />
           </div>
           <div className="sm:col-span-2">
-            <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+            <label className="block text-xs  text-ink-soft mb-1.5">
               备注
             </label>
             <textarea
@@ -293,7 +281,7 @@ export default function LibraryList({
             <button
               type="submit"
               disabled={saving}
-              className="text-sm px-5 py-2.5 rounded-full bg-accent text-paper hover:bg-accent/90 transition-colors"
+              className="text-sm px-5 py-2.5 rounded bg-accent text-paper hover:bg-accent/90 transition-colors"
             >
               {saving ? "保存中…" : "保存"}
             </button>
@@ -302,7 +290,7 @@ export default function LibraryList({
         )}
       </AnimatePresence>
 
-      <div className="flex flex-col">
+      <div className="flex flex-col overflow-hidden rounded-lg border border-line bg-card">
         <AnimatePresence initial={false}>
           {sorted.map((item) => (
             <motion.div
@@ -311,14 +299,13 @@ export default function LibraryList({
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, x: -8 }}
-              whileHover={{ x: 4 }}
               transition={{ duration: 0.3, ease: easeOut }}
-              className="border-b border-line/70 px-1 py-4 flex flex-wrap items-center gap-x-4 gap-y-2"
+              className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line px-4 py-3.5 last:border-b-0"
             >
               {editingId === item.id ? (
                 <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="sm:col-span-2">
-                    <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+                    <label className="block text-xs  text-ink-soft mb-1.5">
                       标题
                     </label>
                     <input
@@ -328,7 +315,7 @@ export default function LibraryList({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+                    <label className="block text-xs  text-ink-soft mb-1.5">
                       类型
                     </label>
                     <select
@@ -341,7 +328,7 @@ export default function LibraryList({
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+                    <label className="block text-xs  text-ink-soft mb-1.5">
                       分类
                     </label>
                     <input
@@ -352,7 +339,7 @@ export default function LibraryList({
                   </div>
                   {projects.length > 0 && (
                     <div>
-                      <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+                      <label className="block text-xs  text-ink-soft mb-1.5">
                         所属项目
                       </label>
                       <select
@@ -370,7 +357,7 @@ export default function LibraryList({
                     </div>
                   )}
                   <div className="sm:col-span-2">
-                    <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+                    <label className="block text-xs  text-ink-soft mb-1.5">
                       链接地址
                     </label>
                     <input
@@ -381,7 +368,7 @@ export default function LibraryList({
                     />
                   </div>
                   <div className="sm:col-span-2">
-                    <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+                    <label className="block text-xs  text-ink-soft mb-1.5">
                       备注
                     </label>
                     <textarea
@@ -395,14 +382,14 @@ export default function LibraryList({
                     <button
                       onClick={cancelEdit}
                       disabled={pendingId === item.id}
-                      className="text-xs px-4 py-2 rounded-full border border-line text-ink-soft hover:border-accent/50 hover:text-accent transition-colors"
+                      className="text-xs px-4 py-2 rounded border border-line text-ink-soft hover:border-accent/50 hover:text-accent transition-colors"
                     >
                       取消
                     </button>
                     <button
                       onClick={() => handleEditSave(item.id)}
                       disabled={pendingId === item.id}
-                      className="text-xs px-4 py-2 rounded-full bg-accent text-paper hover:bg-accent/90 transition-colors disabled:opacity-50"
+                      className="text-xs px-4 py-2 rounded bg-accent text-paper hover:bg-accent/90 transition-colors disabled:opacity-50"
                     >
                       {pendingId === item.id ? "保存中…" : "保存"}
                     </button>
@@ -410,8 +397,8 @@ export default function LibraryList({
                 </div>
               ) : (
                 <>
-                  <span className="h-10 w-10 shrink-0 flex items-center justify-center rounded-xl bg-accent/10 text-accent">
-                    {item.type === "video" ? <VideoIcon /> : <DocIcon />}
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-accent/10 text-accent">
+                    {item.type === "video" ? <Video className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
                   </span>
                   <div className="flex-1 min-w-0">
                     <a
@@ -430,12 +417,12 @@ export default function LibraryList({
                     {item.projectId && projects.find((p) => p.id === item.projectId) && (
                       <Link
                         href={`/projects/${item.projectId}`}
-                        className="text-[11px] px-2.5 py-1 rounded-full bg-accent/10 text-accent hover:bg-accent/20"
+                        className="text-[11px] px-2.5 py-1 rounded bg-accent/10 text-accent hover:bg-accent/20"
                       >
                         {projects.find((p) => p.id === item.projectId)?.name}
                       </Link>
                     )}
-                    <span className="text-[11px] px-2.5 py-1 rounded-full bg-paper-soft text-ink-soft">
+                    <span className="text-[11px] px-2.5 py-1 rounded bg-paper-soft text-ink-soft">
                       {item.category}
                     </span>
                     <span className="text-[11px] text-ink-soft hidden sm:inline">
@@ -443,16 +430,20 @@ export default function LibraryList({
                     </span>
                     <button
                       onClick={() => startEdit(item)}
-                      className="text-ink-soft hover:text-accent text-xs"
+                      className="flex h-8 w-8 items-center justify-center rounded-md text-ink-soft hover:bg-paper-soft hover:text-accent"
+                      aria-label={`编辑 ${item.title}`}
+                      title="编辑"
                     >
-                      编辑
+                      <Pencil className="h-3.5 w-3.5" />
                     </button>
                     <button
                       onClick={() => handleDelete(item.id)}
                       disabled={pendingId === item.id}
-                      className="text-ink-soft hover:text-accent text-xs disabled:opacity-40"
+                      className="flex h-8 w-8 items-center justify-center rounded-md text-ink-soft hover:bg-red-400/10 hover:text-red-500 disabled:opacity-40"
+                      aria-label={`删除 ${item.title}`}
+                      title="删除"
                     >
-                      {pendingId === item.id ? "处理中" : "删除"}
+                      {pendingId === item.id ? <span className="text-[10px]">...</span> : <Trash2 className="h-3.5 w-3.5" />}
                     </button>
                   </div>
                 </>

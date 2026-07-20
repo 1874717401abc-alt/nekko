@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Download, ImageIcon, RotateCcw, Save, ShieldCheck, Trash2, Type, Upload } from "lucide-react";
 import Avatar from "@/components/Avatar";
 import type { HeroContent, TrashItem, User } from "@/lib/types";
 
@@ -216,22 +217,29 @@ export default function AdminPanel({
   };
 
   return (
-    <div className="flex flex-col gap-10">
-      <section className="rounded-2xl border border-line/70 bg-card p-6 sm:p-8">
-        <h2 className="text-sm font-medium text-ink mb-1">数据备份</h2>
+    <div className="grid gap-6 xl:grid-cols-2">
+      <section className="rounded-lg border border-line/70 bg-card p-5 sm:p-6">
+        <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold text-ink">
+          <Download size={16} aria-hidden="true" />
+          数据备份
+        </h2>
         <p className="text-xs text-ink-soft mb-5">
           导出当前工作台数据，包含项目、任务、灵感、资料、打卡、活动记录和成员资料。
         </p>
         <a
           href="/api/admin/export"
-          className="inline-flex text-xs px-4 py-2 rounded-full border border-line text-ink-soft hover:text-accent hover:border-accent transition-colors"
+          className="inline-flex h-9 items-center gap-2 rounded-md border border-line px-3 text-xs font-medium text-ink-soft transition-colors hover:border-accent hover:text-accent"
         >
+          <Download size={14} aria-hidden="true" />
           导出 JSON 备份
         </a>
       </section>
 
-      <section className="rounded-2xl border border-line/70 bg-card p-6 sm:p-8">
-        <h2 className="text-sm font-medium text-ink mb-1">回收站</h2>
+      <section className="rounded-lg border border-line/70 bg-card p-5 sm:p-6">
+        <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold text-ink">
+          <Trash2 size={16} aria-hidden="true" />
+          回收站
+        </h2>
         <p className="text-xs text-ink-soft mb-5">
           最近删除的项目、任务、灵感、资料和打卡会先进入这里，管理员可以恢复或永久删除。
         </p>
@@ -246,7 +254,7 @@ export default function AdminPanel({
               >
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-paper-soft text-ink-soft">
+                    <span className="rounded bg-paper-soft px-2 py-0.5 text-[11px] text-ink-soft">
                       {resourceLabel[item.resource]}
                     </span>
                     <p className="text-sm font-medium text-ink truncate">{item.title}</p>
@@ -262,16 +270,18 @@ export default function AdminPanel({
                     type="button"
                     onClick={() => handleTrashAction(item, "restore")}
                     disabled={trashPending === key}
-                    className="text-xs px-3.5 py-1.5 rounded-full border border-line text-ink-soft hover:text-accent hover:border-accent transition-colors disabled:opacity-50"
+                    className="inline-flex h-8 items-center gap-1.5 rounded-md border border-line px-3 text-xs text-ink-soft transition-colors hover:border-accent hover:text-accent disabled:opacity-50"
                   >
+                    <RotateCcw size={13} aria-hidden="true" />
                     恢复
                   </button>
                   <button
                     type="button"
                     onClick={() => handleTrashAction(item, "purge")}
                     disabled={trashPending === key}
-                    className="text-xs px-3.5 py-1.5 rounded-full border border-line text-ink-soft hover:text-red-300 hover:border-red-300/60 transition-colors disabled:opacity-50"
+                    className="inline-flex h-8 items-center gap-1.5 rounded-md border border-line px-3 text-xs text-ink-soft transition-colors hover:border-red-400 hover:text-red-500 disabled:opacity-50"
                   >
+                    <Trash2 size={13} aria-hidden="true" />
                     永久删除
                   </button>
                 </div>
@@ -282,8 +292,11 @@ export default function AdminPanel({
         </div>
       </section>
 
-      <section className="rounded-2xl border border-line/70 bg-card p-6 sm:p-8">
-        <h2 className="text-sm font-medium text-ink mb-1">成员管理</h2>
+      <section className="rounded-lg border border-line/70 bg-card p-5 sm:p-6">
+        <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold text-ink">
+          <ShieldCheck size={16} aria-hidden="true" />
+          成员管理
+        </h2>
         <p className="text-xs text-ink-soft mb-5">
           {currentUser.isOwner
             ? "你是网站所有者，可以授予或撤销其他成员的控制台权限。"
@@ -302,12 +315,12 @@ export default function AdminPanel({
                   <p className="text-sm font-medium text-ink truncate">
                     {u.displayName}
                     {u.isOwner && (
-                      <span className="ml-2 text-[10px] uppercase tracking-[0.2em] text-accent align-middle">
+                      <span className="ml-2 align-middle text-[10px] text-accent">
                         所有者
                       </span>
                     )}
                     {!u.isOwner && u.isAdmin && (
-                      <span className="ml-2 text-[10px] uppercase tracking-[0.2em] text-ink-soft align-middle">
+                      <span className="ml-2 align-middle text-[10px] text-ink-soft">
                         管理员
                       </span>
                     )}
@@ -319,7 +332,7 @@ export default function AdminPanel({
                 <button
                   onClick={() => toggleAdmin(u.id, !u.isAdmin)}
                   disabled={pendingId === u.id}
-                  className="text-xs px-3.5 py-1.5 rounded-full border border-line text-ink-soft hover:text-accent hover:border-accent transition-colors disabled:opacity-50 shrink-0"
+                  className="h-8 shrink-0 rounded-md border border-line px-3 text-xs text-ink-soft transition-colors hover:border-accent hover:text-accent disabled:opacity-50"
                 >
                   {pendingId === u.id ? "处理中…" : u.isAdmin ? "撤销管理员" : "设为管理员"}
                 </button>
@@ -329,8 +342,11 @@ export default function AdminPanel({
         </div>
       </section>
 
-      <section className="rounded-2xl border border-line/70 bg-card p-6 sm:p-8">
-        <h2 className="text-sm font-medium text-ink mb-1">首页轮播图</h2>
+      <section className="rounded-lg border border-line/70 bg-card p-5 sm:p-6">
+        <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold text-ink">
+          <ImageIcon size={16} aria-hidden="true" />
+          首页轮播图
+        </h2>
         <p className="text-xs text-ink-soft mb-5">
           上传图片替换首页主轮播的背景图，建议使用横向图片（约 16:9）。
         </p>
@@ -338,7 +354,7 @@ export default function AdminPanel({
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {SLIDE_LABELS.map((label, i) => (
             <div key={i} className="flex flex-col gap-2">
-              <p className="text-xs uppercase tracking-[0.2em] text-ink-soft">{label}</p>
+              <p className="text-xs font-medium text-ink-soft">{label}</p>
               <div className="relative aspect-video rounded-lg overflow-hidden border border-line bg-paper-soft">
                 {images[i] ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -354,8 +370,9 @@ export default function AdminPanel({
                   type="button"
                   onClick={() => fileInputRefs[i].current?.click()}
                   disabled={uploadingSlot === i}
-                  className="flex-1 text-xs px-3 py-2 rounded-full border border-line text-ink-soft hover:text-accent hover:border-accent transition-colors disabled:opacity-50"
+                  className="inline-flex h-8 flex-1 items-center justify-center gap-1.5 rounded-md border border-line px-3 text-xs text-ink-soft transition-colors hover:border-accent hover:text-accent disabled:opacity-50"
                 >
+                  <Upload size={13} aria-hidden="true" />
                   {uploadingSlot === i ? "上传中…" : "上传图片"}
                 </button>
                 {images[i] && (
@@ -363,8 +380,9 @@ export default function AdminPanel({
                     type="button"
                     onClick={() => handleHeroReset(i)}
                     disabled={uploadingSlot === i}
-                    className="text-xs px-3 py-2 rounded-full border border-line text-ink-soft hover:text-accent hover:border-accent transition-colors disabled:opacity-50"
+                    className="inline-flex h-8 items-center gap-1.5 rounded-md border border-line px-3 text-xs text-ink-soft transition-colors hover:border-accent hover:text-accent disabled:opacity-50"
                   >
+                    <RotateCcw size={13} aria-hidden="true" />
                     重置
                   </button>
                 )}
@@ -381,16 +399,19 @@ export default function AdminPanel({
         </div>
       </section>
 
-      <section className="rounded-2xl border border-line/70 bg-card p-6 sm:p-8">
-        <h2 className="text-sm font-medium text-ink mb-1">首页轮播文字</h2>
+      <section className="rounded-lg border border-line/70 bg-card p-5 sm:p-6 xl:col-span-2">
+        <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold text-ink">
+          <Type size={16} aria-hidden="true" />
+          首页轮播文字
+        </h2>
         <p className="text-xs text-ink-soft mb-5">
           编辑首页轮播图模块和最新动态板块的文案。
         </p>
         {contentError && <p className="text-xs text-red-400 mb-3">{contentError}</p>}
         <div className="flex flex-col gap-6">
           {content.slides.map((slide, i) => (
-            <div key={i} className="flex flex-col gap-3 rounded-xl border border-line/70 p-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-accent">
+            <div key={i} className="flex flex-col gap-3 border-t border-line/70 py-5 first:border-t-0 first:pt-0">
+              <p className="text-xs font-medium text-accent">
                 {SLIDE_LABELS[i]}
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -447,8 +468,8 @@ export default function AdminPanel({
             </div>
           ))}
 
-          <div className="flex flex-col gap-3 rounded-xl border border-line/70 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-accent">最新动态板块</p>
+          <div className="flex flex-col gap-3 border-t border-line/70 pt-5">
+            <p className="text-xs font-medium text-accent">最新动态板块</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <label className="flex flex-col gap-1.5 text-xs text-ink-soft">
                 小标签
@@ -483,8 +504,9 @@ export default function AdminPanel({
               type="button"
               onClick={saveContent}
               disabled={contentSaving}
-              className="text-xs px-4 py-2 rounded-full border border-line text-ink-soft hover:text-accent hover:border-accent transition-colors disabled:opacity-50"
+              className="inline-flex h-9 items-center gap-2 rounded-md bg-accent px-4 text-xs font-medium text-paper transition-colors hover:bg-accent/90 disabled:opacity-50"
             >
+              <Save size={14} aria-hidden="true" />
               {contentSaving ? "保存中…" : "保存文字"}
             </button>
             {contentSaved && <p className="text-xs text-accent">已保存。</p>}

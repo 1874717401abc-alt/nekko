@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import ProjectDetail from "@/components/ProjectDetail";
 import { getCurrentUser } from "@/lib/auth";
 import { readData } from "@/lib/store";
@@ -31,12 +32,13 @@ export default async function ProjectDetailPage({
   }
 
   return (
-    <div className="px-6 sm:px-10 lg:px-16 py-14 sm:py-20 max-w-4xl mx-auto">
+    <div className="mx-auto min-h-screen max-w-[1280px] px-4 pb-24 pt-6 sm:px-6 sm:pt-8 md:pb-10 lg:px-10">
       <Link
         href="/projects"
-        className="text-[11px] uppercase tracking-[0.2em] text-accent hover:underline"
+        className="inline-flex items-center gap-1.5 text-xs text-accent hover:underline"
       >
-        ← 返回项目列表
+        <ArrowLeft size={13} aria-hidden="true" />
+        返回项目列表
       </Link>
       <ProjectDetail
         project={project}

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
+import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
 import { createItem, deleteItem, patchItem } from "@/lib/clientData";
 import type { Project, ProgressTask, TaskPriority, TaskStatus, User } from "@/lib/types";
 
@@ -148,9 +149,8 @@ export default function ProgressBoard({
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.96 }}
-        whileHover={{ y: -2 }}
         transition={{ duration: 0.3, ease: easeOut }}
-        className="rounded-2xl border border-line/70 bg-card p-4"
+        className="rounded-lg border border-line bg-card p-4"
       >
         <div className="flex items-start justify-between gap-2">
           <Link
@@ -162,9 +162,11 @@ export default function ProgressBoard({
           <button
             onClick={() => handleDelete(task.id)}
             disabled={pendingTaskId === task.id}
-            className="text-ink-soft hover:text-accent text-xs shrink-0 disabled:opacity-40"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-ink-soft hover:bg-red-400/10 hover:text-red-500 disabled:opacity-40"
+            aria-label={`删除 ${task.title}`}
+            title="删除任务"
           >
-            {pendingTaskId === task.id ? "处理中" : "删除"}
+            {pendingTaskId === task.id ? <span className="text-[10px]">...</span> : <Trash2 className="h-3.5 w-3.5" />}
           </button>
         </div>
         {task.description && (
@@ -173,13 +175,13 @@ export default function ProgressBoard({
         <div className="flex flex-wrap items-center justify-between gap-2 mt-3">
           <div className="flex flex-wrap items-center gap-1.5 min-w-0">
             <span
-              className={`text-[11px] px-2 py-0.5 rounded-full ${priorityClass[taskPriority]}`}
+              className={`text-[11px] px-2 py-0.5 rounded ${priorityClass[taskPriority]}`}
             >
               {priorityLabel[taskPriority]}
             </span>
             {due && (
               <span
-                className={`text-[11px] px-2 py-0.5 rounded-full ${
+                className={`text-[11px] px-2 py-0.5 rounded ${
                   due.overdue && task.status !== "done"
                     ? "bg-red-500/10 text-red-300"
                     : "bg-paper-soft text-ink-soft"
@@ -192,12 +194,12 @@ export default function ProgressBoard({
             {task.projectId && projects.find((p) => p.id === task.projectId) && (
               <Link
                 href={`/projects/${task.projectId}`}
-                className="text-[11px] px-2 py-0.5 rounded-full bg-accent/10 text-accent hover:bg-accent/20"
+                className="text-[11px] px-2 py-0.5 rounded bg-accent/10 text-accent hover:bg-accent/20"
               >
                 {projects.find((p) => p.id === task.projectId)?.name}
               </Link>
             )}
-            <span className="text-[11px] px-2 py-0.5 rounded-full bg-paper-soft text-ink-soft">
+            <span className="text-[11px] px-2 py-0.5 rounded bg-paper-soft text-ink-soft">
               {task.assignee}
             </span>
             <span className="text-[11px] text-ink-soft truncate">
@@ -208,18 +210,20 @@ export default function ProgressBoard({
             <button
               onClick={() => moveTask(task.id, -1)}
               disabled={columnStatus === "todo" || pendingTaskId === task.id}
-              className="h-6 w-6 flex items-center justify-center rounded-full border border-line text-ink-soft hover:border-accent hover:text-accent disabled:opacity-30 disabled:cursor-not-allowed text-xs transition-colors"
+              className="flex h-8 w-8 items-center justify-center rounded-md border border-line text-ink-soft transition-colors hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-30"
               aria-label="移到上一栏"
+              title="移到上一栏"
             >
-              ←
+              <ChevronLeft className="h-4 w-4" />
             </button>
             <button
               onClick={() => moveTask(task.id, 1)}
               disabled={columnStatus === "done" || pendingTaskId === task.id}
-              className="h-6 w-6 flex items-center justify-center rounded-full border border-line text-ink-soft hover:border-accent hover:text-accent disabled:opacity-30 disabled:cursor-not-allowed text-xs transition-colors"
+              className="flex h-8 w-8 items-center justify-center rounded-md border border-line text-ink-soft transition-colors hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-30"
               aria-label="移到下一栏"
+              title="移到下一栏"
             >
-              →
+              <ChevronRight className="h-4 w-4" />
             </button>
           </div>
         </div>
@@ -229,13 +233,13 @@ export default function ProgressBoard({
 
   return (
     <div>
-      <div className="flex items-center justify-end gap-2 mb-6">
+      <div className="mb-5 flex flex-wrap items-center justify-end gap-2 border-b border-line pb-4">
         {error && <p className="mr-auto text-xs text-red-400">{error}</p>}
         {projects.length > 0 && (
           <select
             value={activeProject}
             onChange={(e) => setActiveProject(e.target.value)}
-            className="text-xs px-3 py-1.5 rounded-full border border-line bg-paper text-ink-soft focus:outline-none focus:border-accent"
+            className="text-xs px-3 py-1.5 rounded border border-line bg-paper text-ink-soft focus:outline-none focus:border-accent"
           >
             <option value="">全部项目</option>
             {projects.map((p) => (
@@ -247,9 +251,10 @@ export default function ProgressBoard({
         )}
         <button
           onClick={() => setShowForm((v) => !v)}
-          className="text-xs px-4 py-1.5 rounded-full bg-ink text-paper hover:bg-ink/85 transition-colors"
+          className="inline-flex h-9 items-center gap-2 rounded-md bg-ink px-3 text-xs font-medium text-paper hover:bg-ink/85 transition-colors"
         >
-          {showForm ? "取消" : "+ 新建任务"}
+          <Plus className={`h-4 w-4 ${showForm ? "rotate-45" : ""}`} />
+          {showForm ? "取消" : "新建任务"}
         </button>
       </div>
 
@@ -261,10 +266,10 @@ export default function ProgressBoard({
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.35, ease: easeOut }}
-            className="mb-8 overflow-hidden rounded-2xl border border-line/70 bg-card p-6 grid grid-cols-1 sm:grid-cols-2 gap-4"
+            className="mb-6 grid grid-cols-1 gap-4 overflow-hidden rounded-lg border border-line bg-card p-5 sm:grid-cols-2"
           >
           <div className="sm:col-span-2">
-            <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+            <label className="block text-xs  text-ink-soft mb-1.5">
               任务名称
             </label>
             <input
@@ -276,7 +281,7 @@ export default function ProgressBoard({
             />
           </div>
           <div>
-            <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+            <label className="block text-xs  text-ink-soft mb-1.5">
               负责人
             </label>
             <select
@@ -293,7 +298,7 @@ export default function ProgressBoard({
             </select>
           </div>
           <div>
-            <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+            <label className="block text-xs  text-ink-soft mb-1.5">
               优先级
             </label>
             <select
@@ -307,7 +312,7 @@ export default function ProgressBoard({
             </select>
           </div>
           <div>
-            <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+            <label className="block text-xs  text-ink-soft mb-1.5">
               截止日期
             </label>
             <input
@@ -319,7 +324,7 @@ export default function ProgressBoard({
           </div>
           {projects.length > 0 && (
             <div>
-              <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+              <label className="block text-xs  text-ink-soft mb-1.5">
                 所属项目
               </label>
               <select
@@ -337,7 +342,7 @@ export default function ProgressBoard({
             </div>
           )}
           <div className="sm:col-span-2">
-            <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+            <label className="block text-xs  text-ink-soft mb-1.5">
               描述
             </label>
             <textarea
@@ -351,7 +356,7 @@ export default function ProgressBoard({
             <button
               type="submit"
               disabled={formSaving}
-              className="text-sm px-5 py-2.5 rounded-full bg-accent text-paper hover:bg-accent/90 transition-colors"
+              className="text-sm px-5 py-2.5 rounded bg-accent text-paper hover:bg-accent/90 transition-colors"
             >
               {formSaving ? "保存中…" : "添加到「待开始」"}
             </button>
@@ -360,14 +365,14 @@ export default function ProgressBoard({
         )}
       </AnimatePresence>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-10">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {columns.map((col) => {
           const colTasks = visibleTasks.filter((t) => t.status === col.status);
           return (
-            <div key={col.status}>
-              <div className="flex items-baseline justify-between mb-4 px-1">
-                <h2 className="font-serif-display text-xl text-ink">{col.label}</h2>
-                <span className="text-[11px] uppercase tracking-[0.2em] text-ink-soft">
+            <div key={col.status} className="rounded-lg border border-line bg-paper-soft/35 p-3">
+              <div className="mb-3 flex items-baseline justify-between px-1">
+                <h2 className="text-sm font-semibold text-ink">{col.label}</h2>
+                <span className="text-[11px] text-ink-soft">
                   {col.sub} · {colTasks.length}
                 </span>
               </div>

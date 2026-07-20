@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { HoverCard } from "@/components/motion";
+import { Clock3, Undo2 } from "lucide-react";
 import { createItem, deleteItem } from "@/lib/clientData";
 import type { CheckIn, User } from "@/lib/types";
 
@@ -81,12 +81,11 @@ export default function CheckInBoard({
   );
 
   return (
-    <div>
-      <div className="mb-16">
-        <HoverCard className="rounded-2xl border border-line/70 bg-card p-6 max-w-xl">
+    <div className="grid gap-6 xl:grid-cols-[420px_minmax(0,1fr)]">
+        <section className="h-fit rounded-lg border border-line bg-card p-5 xl:sticky xl:top-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="font-serif-display text-2xl text-ink">{currentUser.displayName}</h3>
+              <h3 className="text-base font-semibold text-ink">{currentUser.displayName}</h3>
               {currentUser.role && <p className="text-xs text-ink-soft mt-0.5">{currentUser.role}</p>}
             </div>
             <motion.span
@@ -94,7 +93,7 @@ export default function CheckInBoard({
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.25, ease: easeOut }}
-              className={`text-[11px] px-3 py-1 rounded-full ${
+              className={`rounded px-2.5 py-1 text-[11px] font-medium ${
                 checkedIn ? "bg-accent/10 text-accent" : "bg-paper-soft text-ink-soft"
               }`}
             >
@@ -115,7 +114,7 @@ export default function CheckInBoard({
                   {todays.map((c) => (
                     <div
                       key={c.id}
-                      className="flex items-center justify-between rounded-xl bg-paper-soft px-4 py-2.5"
+                    className="flex items-center justify-between rounded-md bg-paper-soft px-3 py-2.5"
                     >
                       <div>
                         <span className="text-sm text-ink font-medium">
@@ -128,9 +127,11 @@ export default function CheckInBoard({
                       <button
                         onClick={() => handleUndo(c.id)}
                         disabled={pendingId === c.id}
-                        className="text-xs text-ink-soft hover:text-accent disabled:opacity-40"
-                      >
-                        {pendingId === c.id ? "处理中" : "撤销"}
+                      className="flex h-8 w-8 items-center justify-center rounded-md text-ink-soft hover:bg-card hover:text-accent disabled:opacity-40"
+                      aria-label="撤销打卡"
+                      title="撤销打卡"
+                    >
+                      {pendingId === c.id ? <span className="text-[10px]">...</span> : <Undo2 className="h-3.5 w-3.5" />}
                       </button>
                     </div>
                   ))}
@@ -150,18 +151,21 @@ export default function CheckInBoard({
               whileTap={{ scale: 0.95 }}
               onClick={handleCheckIn}
               disabled={saving}
-              className="text-sm px-5 py-2.5 rounded-full bg-accent text-paper hover:bg-accent/90 transition-colors shrink-0 disabled:opacity-50"
+              className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-md bg-accent px-4 text-sm font-medium text-white transition-colors hover:bg-accent/90 disabled:opacity-50"
             >
+              <Clock3 className="h-4 w-4" />
               {saving ? "打卡中…" : "打卡"}
             </motion.button>
           </div>
           {error && <p className="mt-3 text-xs text-red-400">{error}</p>}
-        </HoverCard>
-      </div>
+        </section>
 
-      <section>
-        <h2 className="font-serif-display text-2xl text-ink mb-4">打卡记录</h2>
-        <div className="flex flex-col">
+      <section className="overflow-hidden rounded-lg border border-line bg-card">
+        <div className="flex items-center justify-between border-b border-line px-4 py-3.5">
+          <h2 className="text-sm font-semibold text-ink">最近 14 天</h2>
+          <span className="text-xs text-ink-soft">{checkins.length} 条记录</span>
+        </div>
+        <div className="flex flex-col px-4">
           <AnimatePresence initial={false}>
             {dateKeys.slice(0, 14).map((dateKey) => {
               const entries = checkins
@@ -184,7 +188,7 @@ export default function CheckInBoard({
                     {entries.map((c) => (
                       <span
                         key={c.id}
-                        className="text-[11px] px-3 py-1 rounded-full bg-paper-soft text-ink-soft"
+                        className="text-[11px] px-3 py-1 rounded bg-paper-soft text-ink-soft"
                       >
                         {c.memberName} · {formatTime(c.time)}
                         {c.note ? ` · ${c.note}` : ""}

@@ -1,3 +1,7 @@
+"use client";
+
+import { useState } from "react";
+
 const COLORS = [
   "bg-rose-500/80",
   "bg-orange-500/80",
@@ -29,7 +33,9 @@ export default function Avatar({
   size?: number;
   className?: string;
 }) {
-  if (src) {
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+
+  if (src && failedSrc !== src) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
@@ -37,6 +43,7 @@ export default function Avatar({
         alt={name}
         width={size}
         height={size}
+        onError={() => setFailedSrc(src)}
         className={`rounded-full object-cover shrink-0 ${className}`}
         style={{ width: size, height: size }}
       />
