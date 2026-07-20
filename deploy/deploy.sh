@@ -48,7 +48,7 @@ restore_hermes() {
 trap restore_hermes EXIT
 
 echo "Installing dependencies"
-npm install
+npm ci
 
 echo "Building with a bounded Node.js heap"
 NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=1024}" NEXT_TELEMETRY_DISABLED=1 npm run build
