@@ -25,7 +25,11 @@ export default async function InspirationPage() {
         title="灵感库"
         description="随手记录的链接、想法和参考素材，按标签分类，方便随时回顾。"
       />
-      <InspirationBoard initialItems={items} projects={projects} />
+      <InspirationBoard
+        initialItems={items}
+        projects={projects}
+        canRunRadar={currentUser.isAdmin}
+      />
     </div>
   );
 }

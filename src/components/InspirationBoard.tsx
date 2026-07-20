@@ -24,9 +24,11 @@ function formatDate(iso: string) {
 export default function InspirationBoard({
   initialItems,
   projects,
+  canRunRadar = false,
 }: {
   initialItems: InspirationItem[];
   projects: Project[];
+  canRunRadar?: boolean;
 }) {
   const [items, setItems] = useState<InspirationItem[]>(initialItems);
   const [showForm, setShowForm] = useState(false);
@@ -48,6 +50,8 @@ export default function InspirationBoard({
   const [editTags, setEditTags] = useState("");
   const [editProjectId, setEditProjectId] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [radarMessage, setRadarMessage] = useState<string | null>(null);
+  const [radarRunning, setRadarRunning] = useState(false);
   const [saving, setSaving] = useState(false);
   const [pendingId, setPendingId] = useState<string | null>(null);
 
@@ -114,6 +118,31 @@ export default function InspirationBoard({
     }
   }
 
+  async function runRadar() {
+    setRadarRunning(true);
+    setError(null);
+    setRadarMessage(null);
+    try {
+      const res = await fetch("/api/ai/content-radar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ limit: 6 }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        setError(data?.error ?? "Agent 采集失败。");
+        return;
+      }
+      const created = (data.createdItems ?? []) as InspirationItem[];
+      setItems((current) => [...created, ...current]);
+      setRadarMessage(data.message ?? `已生成 ${created.length} 条灵感。`);
+    } catch {
+      setError("Agent 采集失败，请稍后重试。");
+    } finally {
+      setRadarRunning(false);
+    }
+  }
+
   function startEdit(item: InspirationItem) {
     setEditingId(item.id);
     setEditTitle(item.title);
@@ -157,6 +186,7 @@ export default function InspirationBoard({
     <div>
       <div className="flex flex-wrap items-center gap-2 mb-8">
         {error && <p className="w-full text-xs text-red-400">{error}</p>}
+        {radarMessage && <p className="w-full text-xs text-accent">{radarMessage}</p>}
         <button
           onClick={() => setActiveTag(null)}
           className={`text-xs px-3.5 py-1.5 rounded-full border transition-colors ${
@@ -194,9 +224,18 @@ export default function InspirationBoard({
             ))}
           </select>
         )}
+        {canRunRadar && (
+          <button
+            onClick={runRadar}
+            disabled={radarRunning}
+            className="ml-auto text-xs px-4 py-1.5 rounded-full border border-accent/50 bg-accent/10 text-accent transition-colors hover:bg-accent/15 disabled:opacity-50"
+          >
+            {radarRunning ? "Agent 采集中" : "Agent 采集今日灵感"}
+          </button>
+        )}
         <button
           onClick={() => setShowForm((v) => !v)}
-          className="ml-auto text-xs px-4 py-1.5 rounded-full bg-ink text-paper hover:bg-ink/85 transition-colors"
+          className={`${canRunRadar ? "" : "ml-auto"} text-xs px-4 py-1.5 rounded-full bg-ink text-paper hover:bg-ink/85 transition-colors`}
         >
           {showForm ? "取消" : "+ 新建灵感"}
         </button>
