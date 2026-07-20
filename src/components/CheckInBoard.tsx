@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { HoverCard } from "@/components/motion";
+import { createItem, deleteItem } from "@/lib/clientData";
 import type { CheckIn, User } from "@/lib/types";
 
 const easeOut = [0.22, 1, 0.36, 1] as const;
@@ -30,14 +31,6 @@ function formatDateLabel(dateKey: string) {
   });
 }
 
-async function persist(checkins: CheckIn[]) {
-  await fetch("/api/data/checkins", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(checkins),
-  });
-}
-
 export default function CheckInBoard({
   currentUser,
   initialCheckins,
@@ -47,30 +40,39 @@ export default function CheckInBoard({
 }) {
   const [checkins, setCheckins] = useState<CheckIn[]>(initialCheckins);
   const [note, setNote] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const today = todayKey();
 
   const todays = checkins.filter((c) => c.userId === currentUser.id && c.date === today);
   const checkedIn = todays.length > 0;
 
   async function handleCheckIn() {
-    const newEntry: CheckIn = {
-      id: `checkin-${crypto.randomUUID()}`,
-      userId: currentUser.id,
-      memberName: currentUser.displayName,
-      date: today,
-      time: new Date().toISOString(),
-      note: note.trim() || undefined,
-    };
-    const next = [...checkins, newEntry];
-    setCheckins(next);
-    setNote("");
-    await persist(next);
+    setSaving(true);
+    setError(null);
+    try {
+      const newEntry = await createItem<CheckIn>("checkins", { note });
+      setCheckins((current) => [...current, newEntry]);
+      setNote("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "打卡失败，请重试。");
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handleUndo(id: string) {
-    const next = checkins.filter((c) => c.id !== id);
-    setCheckins(next);
-    await persist(next);
+    setPendingId(id);
+    setError(null);
+    try {
+      await deleteItem("checkins", id);
+      setCheckins((current) => current.filter((c) => c.id !== id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "撤销失败，请重试。");
+    } finally {
+      setPendingId(null);
+    }
   }
 
   // history grouped by date, most recent first
@@ -125,9 +127,10 @@ export default function CheckInBoard({
                       </div>
                       <button
                         onClick={() => handleUndo(c.id)}
-                        className="text-xs text-ink-soft hover:text-accent"
+                        disabled={pendingId === c.id}
+                        className="text-xs text-ink-soft hover:text-accent disabled:opacity-40"
                       >
-                        撤销
+                        {pendingId === c.id ? "处理中" : "撤销"}
                       </button>
                     </div>
                   ))}
@@ -146,11 +149,13 @@ export default function CheckInBoard({
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={handleCheckIn}
-              className="text-sm px-5 py-2.5 rounded-full bg-accent text-paper hover:bg-accent/90 transition-colors shrink-0"
+              disabled={saving}
+              className="text-sm px-5 py-2.5 rounded-full bg-accent text-paper hover:bg-accent/90 transition-colors shrink-0 disabled:opacity-50"
             >
-              打卡
+              {saving ? "打卡中…" : "打卡"}
             </motion.button>
           </div>
+          {error && <p className="mt-3 text-xs text-red-400">{error}</p>}
         </HoverCard>
       </div>
 

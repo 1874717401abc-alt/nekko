@@ -40,7 +40,6 @@ export default async function ProjectDetailPage({
       </Link>
       <ProjectDetail
         project={project}
-        allProjects={projects}
         inspiration={inspiration}
         library={library}
         progress={progress}

@@ -7,7 +7,11 @@ const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 180; // 180 days
 export const GUEST_COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 
 function sessionSecret(): string {
-  return process.env.SESSION_SECRET ?? "nekko-dev-secret-change-me";
+  const secret = process.env.SESSION_SECRET;
+  if (!secret && process.env.NODE_ENV === "production") {
+    throw new Error("SESSION_SECRET is required in production.");
+  }
+  return secret ?? "nekko-dev-secret-change-me";
 }
 
 function base64UrlEncode(bytes: Uint8Array): string {

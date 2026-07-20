@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import Avatar from "@/components/Avatar";
-import type { ProgressTask } from "@/lib/types";
+import { appendTaskEntry, patchItem } from "@/lib/clientData";
+import type { ProgressComment, ProgressLogEntry, ProgressTask, TaskPriority } from "@/lib/types";
 
 const easeOut = [0.22, 1, 0.36, 1] as const;
 
@@ -11,6 +12,12 @@ const statusLabels: Record<string, string> = {
   todo: "待开始",
   doing: "进行中",
   done: "已完成",
+};
+
+const priorityLabels: Record<TaskPriority, string> = {
+  low: "低优先级",
+  normal: "普通优先级",
+  high: "高优先级",
 };
 
 type Member = { id: string; displayName: string; avatarUrl: string };
@@ -25,32 +32,20 @@ function formatTime(iso: string): string {
   });
 }
 
-async function loadTasks(): Promise<ProgressTask[]> {
-  const res = await fetch("/api/data/progress");
-  return res.json();
-}
-
-async function persist(tasks: ProgressTask[]) {
-  await fetch("/api/data/progress", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(tasks),
-  });
-}
-
 export default function ProgressTaskDetail({
   initialTask,
-  currentUser,
   members,
 }: {
   initialTask: ProgressTask;
-  currentUser: { id: string; displayName: string; avatarUrl: string };
   members: Member[];
 }) {
   const [task, setTask] = useState<ProgressTask>(initialTask);
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(initialTask.title);
   const [description, setDescription] = useState(initialTask.description ?? "");
+  const [assignee, setAssignee] = useState(initialTask.assignee);
+  const [priority, setPriority] = useState<TaskPriority>(initialTask.priority ?? "normal");
+  const [dueDate, setDueDate] = useState(initialTask.dueDate ?? "");
   const [savingInfo, setSavingInfo] = useState(false);
 
   const [logInput, setLogInput] = useState("");
@@ -58,6 +53,7 @@ export default function ProgressTaskDetail({
 
   const [commentInput, setCommentInput] = useState("");
   const [postingComment, setPostingComment] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   function memberFor(userId: string, fallbackName: string): Member {
     return members.find((m) => m.id === userId) ?? { id: userId, displayName: fallbackName, avatarUrl: "" };
@@ -68,19 +64,22 @@ export default function ProgressTaskDetail({
     if (!title.trim()) return;
 
     setSavingInfo(true);
-    const updated: ProgressTask = {
-      ...task,
-      title: title.trim(),
-      description: description.trim() || undefined,
-    };
-
-    const tasks = await loadTasks();
-    const next = tasks.map((t) => (t.id === task.id ? updated : t));
-    await persist(next);
-
-    setTask(updated);
-    setEditing(false);
-    setSavingInfo(false);
+    setError(null);
+    try {
+      const updated = await patchItem<ProgressTask>("progress", task.id, {
+        title,
+        description,
+        assignee,
+        priority,
+        dueDate,
+      });
+      setTask(updated);
+      setEditing(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "保存失败，请重试。");
+    } finally {
+      setSavingInfo(false);
+    }
   }
 
   async function handleAddLog(e: React.FormEvent) {
@@ -88,27 +87,16 @@ export default function ProgressTaskDetail({
     if (!logInput.trim()) return;
 
     setPostingLog(true);
-    const updated: ProgressTask = {
-      ...task,
-      logs: [
-        ...(task.logs ?? []),
-        {
-          id: `log-${Date.now()}`,
-          userId: currentUser.id,
-          memberName: currentUser.displayName,
-          content: logInput.trim(),
-          createdAt: new Date().toISOString(),
-        },
-      ],
-    };
-
-    const tasks = await loadTasks();
-    const next = tasks.map((t) => (t.id === task.id ? updated : t));
-    await persist(next);
-
-    setTask(updated);
-    setLogInput("");
-    setPostingLog(false);
+    setError(null);
+    try {
+      const log = await appendTaskEntry<ProgressLogEntry>(task.id, "logs", logInput);
+      setTask((current) => ({ ...current, logs: [...(current.logs ?? []), log] }));
+      setLogInput("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "添加失败，请重试。");
+    } finally {
+      setPostingLog(false);
+    }
   }
 
   async function handleAddComment(e: React.FormEvent) {
@@ -116,31 +104,24 @@ export default function ProgressTaskDetail({
     if (!commentInput.trim()) return;
 
     setPostingComment(true);
-    const updated: ProgressTask = {
-      ...task,
-      comments: [
-        ...(task.comments ?? []),
-        {
-          id: `comment-${Date.now()}`,
-          userId: currentUser.id,
-          memberName: currentUser.displayName,
-          content: commentInput.trim(),
-          createdAt: new Date().toISOString(),
-        },
-      ],
-    };
-
-    const tasks = await loadTasks();
-    const next = tasks.map((t) => (t.id === task.id ? updated : t));
-    await persist(next);
-
-    setTask(updated);
-    setCommentInput("");
-    setPostingComment(false);
+    setError(null);
+    try {
+      const comment = await appendTaskEntry<ProgressComment>(task.id, "comments", commentInput);
+      setTask((current) => ({
+        ...current,
+        comments: [...(current.comments ?? []), comment],
+      }));
+      setCommentInput("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "发送失败，请重试。");
+    } finally {
+      setPostingComment(false);
+    }
   }
 
   return (
     <div className="mt-8 flex flex-col gap-10">
+      {error && <p className="text-xs text-red-400">{error}</p>}
       {/* Section 1 & 2: title + description */}
       <motion.section
         initial={{ opacity: 0, y: 14 }}
@@ -172,12 +153,59 @@ export default function ProgressTaskDetail({
                 className="w-full rounded-lg border border-line bg-paper px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent resize-none"
               />
             </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+                  负责人
+                </label>
+                <select
+                  value={assignee}
+                  onChange={(e) => setAssignee(e.target.value)}
+                  className="w-full rounded-lg border border-line bg-paper px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent"
+                >
+                  <option value="未分配">未分配</option>
+                  {members.map((member) => (
+                    <option key={member.id} value={member.displayName}>
+                      {member.displayName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+                  优先级
+                </label>
+                <select
+                  value={priority}
+                  onChange={(e) => setPriority(e.target.value as TaskPriority)}
+                  className="w-full rounded-lg border border-line bg-paper px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent"
+                >
+                  <option value="normal">普通</option>
+                  <option value="high">高</option>
+                  <option value="low">低</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+                  截止日期
+                </label>
+                <input
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                  className="w-full rounded-lg border border-line bg-paper px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent"
+                />
+              </div>
+            </div>
             <div className="flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => {
                   setTitle(task.title);
                   setDescription(task.description ?? "");
+                  setAssignee(task.assignee);
+                  setPriority(task.priority ?? "normal");
+                  setDueDate(task.dueDate ?? "");
                   setEditing(false);
                 }}
                 className="text-sm px-4 py-2 rounded-full border border-line text-ink-soft hover:text-accent hover:border-accent transition-colors"
@@ -211,7 +239,8 @@ export default function ProgressTaskDetail({
               {task.description || "暂无项目内容描述。"}
             </p>
             <p className="mt-4 text-xs text-ink-soft">
-              负责人：{task.assignee} · 由 {task.createdBy} 创建
+              负责人：{task.assignee} · {priorityLabels[task.priority ?? "normal"]}
+              {task.dueDate ? ` · 截止 ${task.dueDate}` : ""} · 由 {task.createdBy} 创建
             </p>
           </div>
         )}

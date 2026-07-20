@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
+import { createItem, deleteItem, patchItem } from "@/lib/clientData";
 import type { InspirationItem, Project } from "@/lib/types";
 
 const easeOut = [0.22, 1, 0.36, 1] as const;
@@ -20,22 +21,12 @@ function formatDate(iso: string) {
   });
 }
 
-async function persist(items: InspirationItem[]) {
-  await fetch("/api/data/inspiration", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(items),
-  });
-}
-
 export default function InspirationBoard({
   initialItems,
   projects,
-  currentUserName,
 }: {
   initialItems: InspirationItem[];
   projects: Project[];
-  currentUserName: string;
 }) {
   const [items, setItems] = useState<InspirationItem[]>(initialItems);
   const [showForm, setShowForm] = useState(false);
@@ -56,6 +47,9 @@ export default function InspirationBoard({
   const [editNote, setEditNote] = useState("");
   const [editTags, setEditTags] = useState("");
   const [editProjectId, setEditProjectId] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [pendingId, setPendingId] = useState<string | null>(null);
 
   const allTags = Array.from(new Set(items.flatMap((i) => i.tags))).sort();
 
@@ -80,31 +74,44 @@ export default function InspirationBoard({
     e.preventDefault();
     if (!title.trim()) return;
 
-    const newItem: InspirationItem = {
-      id: `insp-${Date.now()}`,
-      title: title.trim(),
-      type,
-      url: url.trim() || undefined,
-      note: note.trim() || undefined,
-      tags: tags
-        .split(/[,，]/)
-        .map((t) => t.trim())
-        .filter(Boolean),
-      createdAt: new Date().toISOString(),
-      createdBy: currentUserName,
-      projectId: projectId || undefined,
-    };
-
-    const next = [newItem, ...items];
-    setItems(next);
-    resetForm();
-    await persist(next);
+    setSaving(true);
+    setError(null);
+    try {
+      const newItem = await createItem<InspirationItem>("inspiration", {
+        title,
+        type,
+        url,
+        note,
+        tags: tags
+          .split(/[,，]/)
+          .map((t) => t.trim())
+          .filter(Boolean),
+        projectId,
+      });
+      setItems((current) => [newItem, ...current]);
+      resetForm();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "保存失败，请重试。");
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handleDelete(id: string) {
-    const next = items.filter((i) => i.id !== id);
-    setItems(next);
-    await persist(next);
+    const item = items.find((i) => i.id === id);
+    if (!item) return;
+    if (!window.confirm(`确定删除「${item.title}」吗？`)) return;
+
+    setPendingId(id);
+    setError(null);
+    try {
+      await deleteItem("inspiration", id);
+      setItems((current) => current.filter((i) => i.id !== id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "删除失败，请重试。");
+    } finally {
+      setPendingId(null);
+    }
   }
 
   function startEdit(item: InspirationItem) {
@@ -123,30 +130,33 @@ export default function InspirationBoard({
 
   async function handleEditSave(id: string) {
     if (!editTitle.trim()) return;
-    const next = items.map((i) =>
-      i.id === id
-        ? {
-            ...i,
-            title: editTitle.trim(),
-            type: editType,
-            url: editUrl.trim() || undefined,
-            note: editNote.trim() || undefined,
-            tags: editTags
-              .split(/[,，]/)
-              .map((t) => t.trim())
-              .filter(Boolean),
-            projectId: editProjectId || undefined,
-          }
-        : i
-    );
-    setItems(next);
-    setEditingId(null);
-    await persist(next);
+    setPendingId(id);
+    setError(null);
+    try {
+      const updated = await patchItem<InspirationItem>("inspiration", id, {
+        title: editTitle,
+        type: editType,
+        url: editUrl,
+        note: editNote,
+        tags: editTags
+          .split(/[,，]/)
+          .map((t) => t.trim())
+          .filter(Boolean),
+        projectId: editProjectId,
+      });
+      setItems((current) => current.map((i) => (i.id === id ? updated : i)));
+      setEditingId(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "保存失败，请重试。");
+    } finally {
+      setPendingId(null);
+    }
   }
 
   return (
     <div>
       <div className="flex flex-wrap items-center gap-2 mb-8">
+        {error && <p className="w-full text-xs text-red-400">{error}</p>}
         <button
           onClick={() => setActiveTag(null)}
           className={`text-xs px-3.5 py-1.5 rounded-full border transition-colors ${
@@ -286,9 +296,10 @@ export default function InspirationBoard({
           <div className="sm:col-span-2 flex justify-end">
             <button
               type="submit"
+              disabled={saving}
               className="text-sm px-5 py-2.5 rounded-full bg-accent text-paper hover:bg-accent/90 transition-colors"
             >
-              保存
+              {saving ? "保存中…" : "保存"}
             </button>
           </div>
           </motion.form>
@@ -390,18 +401,20 @@ export default function InspirationBoard({
                     />
                   </div>
                   <div className="flex justify-end gap-2">
-                    <button
-                      onClick={cancelEdit}
-                      className="text-xs px-4 py-2 rounded-full border border-line text-ink-soft hover:border-accent/50 hover:text-accent transition-colors"
-                    >
+	                    <button
+	                      onClick={cancelEdit}
+	                      disabled={pendingId === item.id}
+	                      className="text-xs px-4 py-2 rounded-full border border-line text-ink-soft hover:border-accent/50 hover:text-accent transition-colors"
+	                    >
                       取消
                     </button>
-                    <button
-                      onClick={() => handleEditSave(item.id)}
-                      className="text-xs px-4 py-2 rounded-full bg-accent text-paper hover:bg-accent/90 transition-colors"
-                    >
-                      保存
-                    </button>
+	                    <button
+	                      onClick={() => handleEditSave(item.id)}
+	                      disabled={pendingId === item.id}
+	                      className="text-xs px-4 py-2 rounded-full bg-accent text-paper hover:bg-accent/90 transition-colors disabled:opacity-50"
+	                    >
+	                      {pendingId === item.id ? "保存中…" : "保存"}
+	                    </button>
                   </div>
                 </div>
               ) : (
@@ -417,13 +430,14 @@ export default function InspirationBoard({
                       >
                         编辑
                       </button>
-                      <button
-                        onClick={() => handleDelete(item.id)}
-                        className="text-ink-soft hover:text-accent text-xs"
-                        aria-label="删除"
-                      >
-                        删除
-                      </button>
+	                      <button
+	                        onClick={() => handleDelete(item.id)}
+	                        disabled={pendingId === item.id}
+	                        className="text-ink-soft hover:text-accent text-xs disabled:opacity-40"
+	                        aria-label="删除"
+	                      >
+	                        {pendingId === item.id ? "处理中" : "删除"}
+	                      </button>
                     </div>
                   </div>
                   <h3 className="font-serif-display text-lg text-ink mb-1.5">{item.title}</h3>

@@ -25,7 +25,7 @@ export default async function LibraryPage() {
         title="资料库"
         description="视频成片、文档、素材的链接合集，按类别整理，随取随用。"
       />
-      <LibraryList initialItems={items} projects={projects} currentUserName={currentUser.displayName} />
+      <LibraryList initialItems={items} projects={projects} />
     </div>
   );
 }

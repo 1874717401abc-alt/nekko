@@ -1,36 +1,43 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Nekko Studio Workspace
 
-## Getting Started
+Nekko 自媒体工作室的内部协作工作台，包含项目、任务进度、灵感库、资料库、团队资料、每日打卡和管理控制台。
 
-First, run the development server:
+## 本地运行
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+默认访问地址是 `http://localhost:3000`。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 环境变量
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+复制 `.env.local.example` 为 `.env.local`，并设置：
 
-## Learn More
+- `SESSION_SECRET`: 登录态签名密钥，生产环境必须是长随机字符串。
+- `TEAM_INVITE_CODE`: 成员注册邀请码。
 
-To learn more about Next.js, take a look at the following resources:
+## 功能结构
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `/projects`: 管理项目，并把任务、资料、灵感归到具体项目下。
+- `/progress`: 任务看板，支持任务状态流转。
+- `/progress/[id]`: 任务详情，支持负责人、优先级、截止日期、进度记录和评论。
+- `/inspiration`: 灵感、链接、参考图片记录。
+- `/library`: 视频、文档和素材链接归档。
+- `/checkin`: 每日打卡。
+- `/team`: 团队成员资料。
+- `/admin`: 管理员控制台，管理成员权限、首页内容和 JSON 数据备份。
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 数据存储
 
-## Deploy on Vercel
+数据保存在 `data/nekko.db`。上传的头像和首页图片保存在 `data/uploads`。
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+业务数据通过单条新增、编辑、删除接口保存，避免前端整表覆盖造成多人协作时的数据丢失。关键动作会写入 `activity` 活动记录，用于首页团队动态和后续排查。
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 验证
+
+```bash
+npm run lint
+npm run build
+```

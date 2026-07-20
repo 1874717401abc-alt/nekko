@@ -7,7 +7,14 @@ import { readData } from "@/lib/store";
 import { listUsers } from "@/lib/users";
 import { getCurrentUser, isGuest } from "@/lib/auth";
 import { mergeHeroContent } from "@/lib/heroContent";
-import type { CheckIn, HeroContent, InspirationItem, LibraryItem, ProgressTask } from "@/lib/types";
+import type {
+  ActivityEvent,
+  CheckIn,
+  HeroContent,
+  InspirationItem,
+  LibraryItem,
+  ProgressTask,
+} from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -38,8 +45,35 @@ function formatTime(iso: string) {
   });
 }
 
+function formatActivityTime(iso: string) {
+  return new Date(iso).toLocaleString("zh-CN", {
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function formatDueDate(dateKey: string) {
+  return new Date(`${dateKey}T00:00:00`).toLocaleDateString("zh-CN", {
+    month: "numeric",
+    day: "numeric",
+  });
+}
+
 export default async function Dashboard() {
-  const [currentUser, guest, tasks, inspiration, library, members, checkins, heroImages, heroContentRaw] = await Promise.all([
+  const [
+    currentUser,
+    guest,
+    tasks,
+    inspiration,
+    library,
+    members,
+    checkins,
+    heroImages,
+    heroContentRaw,
+    activity,
+  ] = await Promise.all([
     getCurrentUser(),
     isGuest(),
     readData<ProgressTask[]>("progress"),
@@ -49,6 +83,7 @@ export default async function Dashboard() {
     readData<CheckIn[]>("checkins"),
     readData<string[]>("hero"),
     readData<Partial<HeroContent>>("heroContent"),
+    readData<ActivityEvent[]>("activity"),
   ]);
 
   if (!currentUser && !guest) {
@@ -69,6 +104,15 @@ export default async function Dashboard() {
   const recentLibrary = [...library]
     .sort((a, b) => +new Date(b.addedAt) - +new Date(a.addedAt))
     .slice(0, 3);
+
+  const upcomingTasks = [...tasks]
+    .filter((task) => task.status !== "done" && task.dueDate)
+    .sort((a, b) => String(a.dueDate).localeCompare(String(b.dueDate)))
+    .slice(0, 4);
+
+  const recentActivity = [...activity]
+    .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
+    .slice(0, 5);
 
   const today = new Date().toLocaleDateString("zh-CN", {
     year: "numeric",
@@ -187,8 +231,68 @@ export default async function Dashboard() {
           </StaggerContainer>
         </section>
 
-        {/* Recent inspiration + library */}
+        {/* Upcoming + activity */}
         <div className="flex flex-col gap-16">
+          <section>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="font-serif-display text-2xl text-ink">近期截止</h2>
+              <Link href="/progress" className="text-xs uppercase tracking-[0.2em] text-accent">
+                查看任务 →
+              </Link>
+            </div>
+            <StaggerContainer className="flex flex-col gap-4">
+              {upcomingTasks.map((task) => (
+                <StaggerItem key={task.id}>
+                  <HoverCard className="px-1 py-3 border-b border-line/70">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <Link
+                          href={`/progress/${task.id}`}
+                          className="text-sm font-medium text-ink hover:text-accent"
+                        >
+                          {task.title}
+                        </Link>
+                        <p className="mt-1 text-xs text-ink-soft">
+                          {task.assignee} · {task.priority === "high" ? "高优先级" : "普通优先级"}
+                        </p>
+                      </div>
+                      <span className="text-[11px] px-2.5 py-1 rounded-full bg-paper-soft text-ink-soft shrink-0">
+                        {formatDueDate(task.dueDate!)}
+                      </span>
+                    </div>
+                  </HoverCard>
+                </StaggerItem>
+              ))}
+              {upcomingTasks.length === 0 && (
+                <p className="text-sm text-ink-soft">暂无设置截止日期的未完成任务。</p>
+              )}
+            </StaggerContainer>
+          </section>
+
+          <section>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="font-serif-display text-2xl text-ink">团队动态</h2>
+            </div>
+            <StaggerContainer className="flex flex-col gap-4">
+              {recentActivity.map((event) => (
+                <StaggerItem key={event.id}>
+                  <HoverCard className="px-1 py-3 border-b border-line/70">
+                    <p className="text-sm font-medium text-ink">{event.summary}</p>
+                    <p className="mt-1 text-[11px] text-ink-soft">
+                      {formatActivityTime(event.createdAt)}
+                    </p>
+                  </HoverCard>
+                </StaggerItem>
+              ))}
+              {recentActivity.length === 0 && (
+                <p className="text-sm text-ink-soft">还没有团队动态。</p>
+              )}
+            </StaggerContainer>
+          </section>
+        </div>
+
+        {/* Recent inspiration + library */}
+        <div className="flex flex-col gap-16 lg:col-span-2">
           <section>
             <div className="flex items-center justify-between mb-6">
               <h2 className="font-serif-display text-2xl text-ink">最新灵感</h2>

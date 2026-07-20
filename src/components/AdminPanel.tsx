@@ -168,6 +168,19 @@ export default function AdminPanel({
   return (
     <div className="flex flex-col gap-10">
       <section className="rounded-2xl border border-line/70 bg-card p-6 sm:p-8">
+        <h2 className="text-sm font-medium text-ink mb-1">数据备份</h2>
+        <p className="text-xs text-ink-soft mb-5">
+          导出当前工作台数据，包含项目、任务、灵感、资料、打卡、活动记录和成员资料。
+        </p>
+        <a
+          href="/api/admin/export"
+          className="inline-flex text-xs px-4 py-2 rounded-full border border-line text-ink-soft hover:text-accent hover:border-accent transition-colors"
+        >
+          导出 JSON 备份
+        </a>
+      </section>
+
+      <section className="rounded-2xl border border-line/70 bg-card p-6 sm:p-8">
         <h2 className="text-sm font-medium text-ink mb-1">成员管理</h2>
         <p className="text-xs text-ink-soft mb-5">
           {currentUser.isOwner

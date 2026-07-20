@@ -7,6 +7,7 @@ export type InspirationItem = {
   tags: string[];
   createdAt: string;
   createdBy: string;
+  createdById?: string;
   projectId?: string;
 };
 
@@ -19,6 +20,7 @@ export type LibraryItem = {
   note?: string;
   addedAt: string;
   createdBy: string;
+  createdById?: string;
   projectId?: string;
 };
 
@@ -29,9 +31,11 @@ export type Project = {
   tags: string[];
   createdAt: string;
   createdBy: string;
+  createdById?: string;
 };
 
 export type TaskStatus = "todo" | "doing" | "done";
+export type TaskPriority = "low" | "normal" | "high";
 
 export type ProgressLogEntry = {
   id: string;
@@ -54,12 +58,30 @@ export type ProgressTask = {
   title: string;
   description?: string;
   status: TaskStatus;
+  priority?: TaskPriority;
+  dueDate?: string; // YYYY-MM-DD
   assignee: string;
   createdAt: string;
   createdBy: string;
+  createdById?: string;
   logs?: ProgressLogEntry[];
   comments?: ProgressComment[];
   projectId?: string;
+};
+
+export type ActivityType = "create" | "update" | "delete" | "log" | "comment" | "checkin";
+
+export type ActivityEvent = {
+  id: string;
+  type: ActivityType;
+  resource: string;
+  resourceId?: string;
+  title: string;
+  summary: string;
+  userId: string;
+  memberName: string;
+  projectId?: string;
+  createdAt: string;
 };
 
 export type User = {

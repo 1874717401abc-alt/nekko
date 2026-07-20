@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
+import { createItem, deleteItem, patchItem } from "@/lib/clientData";
 import type { LibraryItem, Project } from "@/lib/types";
 
 const easeOut = [0.22, 1, 0.36, 1] as const;
@@ -11,14 +12,6 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("zh-CN", {
     month: "long",
     day: "numeric",
-  });
-}
-
-async function persist(items: LibraryItem[]) {
-  await fetch("/api/data/library", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(items),
   });
 }
 
@@ -39,11 +32,9 @@ const DocIcon = () => (
 export default function LibraryList({
   initialItems,
   projects,
-  currentUserName,
 }: {
   initialItems: LibraryItem[];
   projects: Project[];
-  currentUserName: string;
 }) {
   const [items, setItems] = useState<LibraryItem[]>(initialItems);
   const [showForm, setShowForm] = useState(false);
@@ -64,6 +55,9 @@ export default function LibraryList({
   const [editCategory, setEditCategory] = useState("");
   const [editNote, setEditNote] = useState("");
   const [editProjectId, setEditProjectId] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [pendingId, setPendingId] = useState<string | null>(null);
 
   const categories = Array.from(new Set(items.map((i) => i.category))).sort();
   const filtered = items
@@ -85,28 +79,41 @@ export default function LibraryList({
     e.preventDefault();
     if (!title.trim() || !url.trim()) return;
 
-    const newItem: LibraryItem = {
-      id: `lib-${Date.now()}`,
-      title: title.trim(),
-      type,
-      url: url.trim(),
-      category: category.trim() || "未分类",
-      note: note.trim() || undefined,
-      addedAt: new Date().toISOString(),
-      createdBy: currentUserName,
-      projectId: projectId || undefined,
-    };
-
-    const next = [newItem, ...items];
-    setItems(next);
-    resetForm();
-    await persist(next);
+    setSaving(true);
+    setError(null);
+    try {
+      const newItem = await createItem<LibraryItem>("library", {
+        title,
+        type,
+        url,
+        category,
+        note,
+        projectId,
+      });
+      setItems((current) => [newItem, ...current]);
+      resetForm();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "保存失败，请重试。");
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handleDelete(id: string) {
-    const next = items.filter((i) => i.id !== id);
-    setItems(next);
-    await persist(next);
+    const item = items.find((i) => i.id === id);
+    if (!item) return;
+    if (!window.confirm(`确定删除「${item.title}」吗？`)) return;
+
+    setPendingId(id);
+    setError(null);
+    try {
+      await deleteItem("library", id);
+      setItems((current) => current.filter((i) => i.id !== id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "删除失败，请重试。");
+    } finally {
+      setPendingId(null);
+    }
   }
 
   function startEdit(item: LibraryItem) {
@@ -125,27 +132,30 @@ export default function LibraryList({
 
   async function handleEditSave(id: string) {
     if (!editTitle.trim() || !editUrl.trim()) return;
-    const next = items.map((i) =>
-      i.id === id
-        ? {
-            ...i,
-            title: editTitle.trim(),
-            type: editType,
-            url: editUrl.trim(),
-            category: editCategory.trim() || "未分类",
-            note: editNote.trim() || undefined,
-            projectId: editProjectId || undefined,
-          }
-        : i
-    );
-    setItems(next);
-    setEditingId(null);
-    await persist(next);
+    setPendingId(id);
+    setError(null);
+    try {
+      const updated = await patchItem<LibraryItem>("library", id, {
+        title: editTitle,
+        type: editType,
+        url: editUrl,
+        category: editCategory,
+        note: editNote,
+        projectId: editProjectId,
+      });
+      setItems((current) => current.map((i) => (i.id === id ? updated : i)));
+      setEditingId(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "保存失败，请重试。");
+    } finally {
+      setPendingId(null);
+    }
   }
 
   return (
     <div>
       <div className="flex flex-wrap items-center gap-2 mb-8">
+        {error && <p className="w-full text-xs text-red-400">{error}</p>}
         <button
           onClick={() => setActiveCategory(null)}
           className={`text-xs px-3.5 py-1.5 rounded-full border transition-colors ${
@@ -282,9 +292,10 @@ export default function LibraryList({
           <div className="sm:col-span-2 flex justify-end">
             <button
               type="submit"
+              disabled={saving}
               className="text-sm px-5 py-2.5 rounded-full bg-accent text-paper hover:bg-accent/90 transition-colors"
             >
-              保存
+              {saving ? "保存中…" : "保存"}
             </button>
           </div>
           </motion.form>
@@ -383,15 +394,17 @@ export default function LibraryList({
                   <div className="sm:col-span-2 flex justify-end gap-2">
                     <button
                       onClick={cancelEdit}
+                      disabled={pendingId === item.id}
                       className="text-xs px-4 py-2 rounded-full border border-line text-ink-soft hover:border-accent/50 hover:text-accent transition-colors"
                     >
                       取消
                     </button>
                     <button
                       onClick={() => handleEditSave(item.id)}
-                      className="text-xs px-4 py-2 rounded-full bg-accent text-paper hover:bg-accent/90 transition-colors"
+                      disabled={pendingId === item.id}
+                      className="text-xs px-4 py-2 rounded-full bg-accent text-paper hover:bg-accent/90 transition-colors disabled:opacity-50"
                     >
-                      保存
+                      {pendingId === item.id ? "保存中…" : "保存"}
                     </button>
                   </div>
                 </div>
@@ -436,9 +449,10 @@ export default function LibraryList({
                     </button>
                     <button
                       onClick={() => handleDelete(item.id)}
-                      className="text-ink-soft hover:text-accent text-xs"
+                      disabled={pendingId === item.id}
+                      className="text-ink-soft hover:text-accent text-xs disabled:opacity-40"
                     >
-                      删除
+                      {pendingId === item.id ? "处理中" : "删除"}
                     </button>
                   </div>
                 </>

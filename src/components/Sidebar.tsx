@@ -101,6 +101,18 @@ const navItems: { href: string; label: string; sub: string; icon: ReactNode }[] 
   },
 ];
 
+const adminNavItem: { href: string; label: string; sub: string; icon: ReactNode } = {
+  href: "/admin",
+  label: "管理",
+  sub: "Console",
+  icon: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4">
+      <path d="M12 3.5 19 7v5c0 4.4-2.9 7.4-7 8.5-4.1-1.1-7-4.1-7-8.5V7l7-3.5Z" strokeLinejoin="round" />
+      <path d="M9 12.2 11 14l4-4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+};
+
 const joinUsIcon = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4">
     <path d="M12 20.5c-4.8-3-8-6-8-9.5a4.2 4.2 0 0 1 8-1.8A4.2 4.2 0 0 1 20 11c0 3.5-3.2 6.5-8 9.5Z" strokeLinejoin="round" />
@@ -135,6 +147,8 @@ export default function Sidebar() {
   const isGuestView = me?.guest === true && !me?.user;
   const visibleNavItems = isGuestView
     ? navItems.filter((item) => item.href === "/")
+    : me?.user?.isAdmin
+      ? [...navItems, adminNavItem]
     : navItems;
 
   return (

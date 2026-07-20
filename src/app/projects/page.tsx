@@ -32,7 +32,6 @@ export default async function ProjectsPage() {
         inspiration={inspiration}
         library={library}
         progress={progress}
-        currentUserName={currentUser.displayName}
       />
     </div>
   );

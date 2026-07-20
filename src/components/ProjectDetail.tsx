@@ -4,7 +4,15 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import type { InspirationItem, LibraryItem, Project, ProgressTask, TaskStatus } from "@/lib/types";
+import { createItem, deleteItem, patchItem } from "@/lib/clientData";
+import type {
+  InspirationItem,
+  LibraryItem,
+  Project,
+  ProgressTask,
+  TaskPriority,
+  TaskStatus,
+} from "@/lib/types";
 
 const easeOut = [0.22, 1, 0.36, 1] as const;
 
@@ -28,23 +36,15 @@ function formatDate(iso: string) {
   });
 }
 
-async function persist(resource: string, data: unknown) {
-  await fetch(`/api/data/${resource}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
-}
+type QuickKind = "task" | "library" | "inspiration";
 
 export default function ProjectDetail({
   project,
-  allProjects,
   inspiration,
   library,
   progress,
 }: {
   project: Project;
-  allProjects: Project[];
   inspiration: InspirationItem[];
   library: LibraryItem[];
   progress: ProgressTask[];
@@ -54,6 +54,17 @@ export default function ProjectDetail({
   const [name, setName] = useState(project.name);
   const [description, setDescription] = useState(project.description ?? "");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [quickKind, setQuickKind] = useState<QuickKind>("task");
+  const [quickTitle, setQuickTitle] = useState("");
+  const [quickUrl, setQuickUrl] = useState("");
+  const [quickNote, setQuickNote] = useState("");
+  const [quickCategory, setQuickCategory] = useState("");
+  const [quickAssignee, setQuickAssignee] = useState("");
+  const [quickPriority, setQuickPriority] = useState<TaskPriority>("normal");
+  const [quickDueDate, setQuickDueDate] = useState("");
+  const [quickTags, setQuickTags] = useState("");
+  const [quickSaving, setQuickSaving] = useState(false);
 
   const myInspiration = inspiration.filter((i) => i.projectId === project.id);
   const myLibrary = library.filter((i) => i.projectId === project.id);
@@ -63,41 +74,91 @@ export default function ProjectDetail({
     e.preventDefault();
     if (!name.trim()) return;
     setSaving(true);
-    const next = allProjects.map((p) =>
-      p.id === project.id
-        ? { ...p, name: name.trim(), description: description.trim() || undefined }
-        : p
-    );
-    await persist("projects", next);
-    setSaving(false);
-    setEditing(false);
-    router.refresh();
+    setError(null);
+    try {
+      await patchItem<Project>("projects", project.id, { name, description });
+      setEditing(false);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "保存失败，请重试。");
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handleDelete() {
-    const nextProjects = allProjects.filter((p) => p.id !== project.id);
-    await persist("projects", nextProjects);
+    if (!window.confirm(`确定删除「${project.name}」吗？关联内容会保留，但会移出这个项目。`)) {
+      return;
+    }
 
-    if (myInspiration.length > 0) {
-      await persist(
-        "inspiration",
-        inspiration.map((i) => (i.projectId === project.id ? { ...i, projectId: undefined } : i))
-      );
+    setSaving(true);
+    setError(null);
+    try {
+      await deleteItem("projects", project.id);
+      router.push("/projects");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "删除失败，请重试。");
+    } finally {
+      setSaving(false);
     }
-    if (myLibrary.length > 0) {
-      await persist(
-        "library",
-        library.map((i) => (i.projectId === project.id ? { ...i, projectId: undefined } : i))
-      );
+  }
+
+  function resetQuickForm() {
+    setQuickTitle("");
+    setQuickUrl("");
+    setQuickNote("");
+    setQuickCategory("");
+    setQuickAssignee("");
+    setQuickPriority("normal");
+    setQuickDueDate("");
+    setQuickTags("");
+  }
+
+  async function handleQuickAdd(e: React.FormEvent) {
+    e.preventDefault();
+    if (!quickTitle.trim()) return;
+
+    setQuickSaving(true);
+    setError(null);
+    try {
+      if (quickKind === "task") {
+        await createItem<ProgressTask>("progress", {
+          title: quickTitle,
+          description: quickNote,
+          assignee: quickAssignee,
+          priority: quickPriority,
+          dueDate: quickDueDate,
+          projectId: project.id,
+        });
+      } else if (quickKind === "library") {
+        await createItem<LibraryItem>("library", {
+          title: quickTitle,
+          url: quickUrl,
+          category: quickCategory,
+          note: quickNote,
+          projectId: project.id,
+        });
+      } else {
+        await createItem<InspirationItem>("inspiration", {
+          title: quickTitle,
+          type: quickUrl.trim() ? "link" : "note",
+          url: quickUrl,
+          note: quickNote,
+          tags: quickTags
+            .split(/[,，]/)
+            .map((tag) => tag.trim())
+            .filter(Boolean),
+          projectId: project.id,
+        });
+      }
+      resetQuickForm();
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "保存失败，请重试。");
+    } finally {
+      setQuickSaving(false);
     }
-    if (myProgress.length > 0) {
-      await persist(
-        "progress",
-        progress.map((t) => (t.projectId === project.id ? { ...t, projectId: undefined } : t))
-      );
-    }
-    router.push("/projects");
-    router.refresh();
   }
 
   return (
@@ -107,6 +168,7 @@ export default function ProjectDetail({
       transition={{ duration: 0.5, ease: easeOut }}
       className="mt-6"
     >
+      {error && <p className="mb-4 text-xs text-red-400">{error}</p>}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-10">
         {editing ? (
           <form onSubmit={handleSave} className="flex-1 flex flex-col gap-3">
@@ -179,6 +241,7 @@ export default function ProjectDetail({
             </button>
             <button
               onClick={handleDelete}
+              disabled={saving}
               className="text-xs px-4 py-2 rounded-full border border-line text-ink-soft hover:border-accent hover:text-accent transition-colors"
             >
               删除项目
@@ -186,6 +249,127 @@ export default function ProjectDetail({
           </div>
         )}
       </div>
+
+      <section className="rounded-2xl border border-line/70 bg-card p-5 sm:p-6 mb-10">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+          <h2 className="font-serif-display text-xl text-ink">快速添加</h2>
+          <div className="flex rounded-full border border-line bg-paper-soft p-1">
+            {[
+              ["task", "任务"],
+              ["library", "资料"],
+              ["inspiration", "灵感"],
+            ].map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => {
+                  setQuickKind(value as QuickKind);
+                  resetQuickForm();
+                }}
+                className={`rounded-full px-3 py-1 text-xs transition-colors ${
+                  quickKind === value ? "bg-accent text-paper" : "text-ink-soft hover:text-ink"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <form onSubmit={handleQuickAdd} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <input
+            value={quickTitle}
+            onChange={(e) => setQuickTitle(e.target.value)}
+            required
+            placeholder={
+              quickKind === "task"
+                ? "任务名称"
+                : quickKind === "library"
+                  ? "资料标题"
+                  : "灵感标题"
+            }
+            className="sm:col-span-2 rounded-lg border border-line bg-paper px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent"
+          />
+
+          {quickKind === "task" && (
+            <>
+              <input
+                value={quickAssignee}
+                onChange={(e) => setQuickAssignee(e.target.value)}
+                placeholder="负责人"
+                className="rounded-lg border border-line bg-paper px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent"
+              />
+              <select
+                value={quickPriority}
+                onChange={(e) => setQuickPriority(e.target.value as TaskPriority)}
+                className="rounded-lg border border-line bg-paper px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent"
+              >
+                <option value="normal">普通优先级</option>
+                <option value="high">高优先级</option>
+                <option value="low">低优先级</option>
+              </select>
+              <input
+                type="date"
+                value={quickDueDate}
+                onChange={(e) => setQuickDueDate(e.target.value)}
+                className="rounded-lg border border-line bg-paper px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent"
+              />
+            </>
+          )}
+
+          {quickKind === "library" && (
+            <>
+              <input
+                value={quickUrl}
+                onChange={(e) => setQuickUrl(e.target.value)}
+                required
+                placeholder="https://"
+                className="rounded-lg border border-line bg-paper px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent"
+              />
+              <input
+                value={quickCategory}
+                onChange={(e) => setQuickCategory(e.target.value)}
+                placeholder="分类：脚本 / 成片 / 素材"
+                className="rounded-lg border border-line bg-paper px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent"
+              />
+            </>
+          )}
+
+          {quickKind === "inspiration" && (
+            <>
+              <input
+                value={quickUrl}
+                onChange={(e) => setQuickUrl(e.target.value)}
+                placeholder="链接地址，可选"
+                className="rounded-lg border border-line bg-paper px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent"
+              />
+              <input
+                value={quickTags}
+                onChange={(e) => setQuickTags(e.target.value)}
+                placeholder="标签，逗号分隔"
+                className="rounded-lg border border-line bg-paper px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent"
+              />
+            </>
+          )}
+
+          <textarea
+            value={quickNote}
+            onChange={(e) => setQuickNote(e.target.value)}
+            rows={2}
+            placeholder={quickKind === "task" ? "任务说明，可选" : "备注，可选"}
+            className="sm:col-span-2 rounded-lg border border-line bg-paper px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent resize-none"
+          />
+          <div className="sm:col-span-2 flex justify-end">
+            <button
+              type="submit"
+              disabled={quickSaving}
+              className="text-sm px-5 py-2.5 rounded-full bg-accent text-paper hover:bg-accent/90 transition-colors disabled:opacity-50"
+            >
+              {quickSaving ? "保存中…" : "添加到项目"}
+            </button>
+          </div>
+        </form>
+      </section>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-10">
         <section>

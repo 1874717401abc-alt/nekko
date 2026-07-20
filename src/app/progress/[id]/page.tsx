@@ -39,11 +39,6 @@ export default async function ProgressTaskPage({
       </Link>
       <ProgressTaskDetail
         initialTask={task}
-        currentUser={{
-          id: currentUser.id,
-          displayName: currentUser.displayName,
-          avatarUrl: currentUser.avatarUrl,
-        }}
         members={users.map((u) => ({
           id: u.id,
           displayName: u.displayName,
