@@ -3,6 +3,7 @@ set -euo pipefail
 
 APP_DIR="${APP_DIR:-/opt/nekko}"
 PM2_APP="${PM2_APP:-nekko}"
+HERMES_PM2_APP="${HERMES_PM2_APP:-hermes-gateway}"
 BRANCH="${BRANCH:-main}"
 HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:3000/login}"
 BACKUP_DIR="${BACKUP_DIR:-/opt}"
@@ -29,14 +30,32 @@ fi
 
 git pull --ff-only origin "$BRANCH"
 
+hermes_was_online=0
+hermes_pid="$(pm2 pid "$HERMES_PM2_APP" 2>/dev/null || true)"
+if [ -n "$hermes_pid" ] && [ "$hermes_pid" != "0" ]; then
+  hermes_was_online=1
+  echo "Pausing $HERMES_PM2_APP during install and build"
+  pm2 stop "$HERMES_PM2_APP"
+fi
+
+restore_hermes() {
+  if [ "$hermes_was_online" = "1" ]; then
+    echo "Restoring $HERMES_PM2_APP"
+    pm2 restart "$HERMES_PM2_APP" --update-env
+    hermes_was_online=0
+  fi
+}
+trap restore_hermes EXIT
+
 echo "Installing dependencies"
 npm install
 
-echo "Building"
-npm run build
+echo "Building with a bounded Node.js heap"
+NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=1024}" NEXT_TELEMETRY_DISABLED=1 npm run build
 
 echo "Restarting $PM2_APP"
 pm2 restart "$PM2_APP" --update-env
+restore_hermes
 
 echo "Checking health: $HEALTH_URL"
 for attempt in $(seq 1 30); do
