@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
-import { readData } from "@/lib/store";
+import { listAllDataItems, listTrashItems, readData } from "@/lib/store";
 import { listUsers } from "@/lib/users";
 import type {
   ActivityEvent,
@@ -18,13 +18,8 @@ export async function GET() {
     return NextResponse.json({ error: "无权限" }, { status: 403 });
   }
 
-  const [projects, progress, inspiration, library, checkins, activity, heroImages, heroContent] =
+  const [activity, heroImages, heroContent] =
     await Promise.all([
-      readData<Project[]>("projects"),
-      readData<ProgressTask[]>("progress"),
-      readData<InspirationItem[]>("inspiration"),
-      readData<LibraryItem[]>("library"),
-      readData<CheckIn[]>("checkins"),
       readData<ActivityEvent[]>("activity"),
       readData<string[]>("hero"),
       readData<Partial<HeroContent>>("heroContent"),
@@ -35,12 +30,13 @@ export async function GET() {
     exportedAt,
     exportedBy: { id: user.id, displayName: user.displayName },
     users: listUsers(),
+    trash: listTrashItems(),
     data: {
-      projects,
-      progress,
-      inspiration,
-      library,
-      checkins,
+      projects: listAllDataItems<Project>("projects"),
+      progress: listAllDataItems<ProgressTask>("progress"),
+      inspiration: listAllDataItems<InspirationItem>("inspiration"),
+      library: listAllDataItems<LibraryItem>("library"),
+      checkins: listAllDataItems<CheckIn>("checkins"),
       activity,
       heroImages,
       heroContent,

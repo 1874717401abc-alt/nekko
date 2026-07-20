@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Avatar from "@/components/Avatar";
-import type { HeroContent, User } from "@/lib/types";
+import type { HeroContent, TrashItem, User } from "@/lib/types";
 
 const SLIDE_LABELS = ["轮播图 1（主图）", "轮播图 2", "轮播图 3"];
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -22,11 +22,13 @@ export default function AdminPanel({
   users,
   heroImages,
   heroContent,
+  trashItems,
 }: {
   currentUser: User;
   users: User[];
   heroImages: string[];
   heroContent: HeroContent;
+  trashItems: TrashItem[];
 }) {
   const router = useRouter();
   const [memberError, setMemberError] = useState<string | null>(null);
@@ -44,6 +46,9 @@ export default function AdminPanel({
   const [contentSaving, setContentSaving] = useState(false);
   const [contentError, setContentError] = useState<string | null>(null);
   const [contentSaved, setContentSaved] = useState(false);
+  const [trash, setTrash] = useState<TrashItem[]>(trashItems);
+  const [trashError, setTrashError] = useState<string | null>(null);
+  const [trashPending, setTrashPending] = useState<string | null>(null);
 
   function updateSlideField(index: number, field: keyof HeroContent["slides"][number], value: string) {
     setContentSaved(false);
@@ -165,6 +170,51 @@ export default function AdminPanel({
     }
   }
 
+  async function handleTrashAction(item: TrashItem, action: "restore" | "purge") {
+    if (action === "purge" && !window.confirm(`确定永久删除「${item.title}」吗？此操作不能恢复。`)) {
+      return;
+    }
+
+    const key = `${item.resource}:${item.id}`;
+    setTrashError(null);
+    setTrashPending(key);
+    try {
+      const res = await fetch(`/api/admin/trash/${item.resource}/${item.id}`, {
+        method: action === "restore" ? "PATCH" : "DELETE",
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        setTrashError(data?.error ?? "操作失败，请重试。");
+        return;
+      }
+      setTrash((current) =>
+        current.filter((entry) => entry.resource !== item.resource || entry.id !== item.id)
+      );
+      router.refresh();
+    } catch {
+      setTrashError("操作失败，请重试。");
+    } finally {
+      setTrashPending(null);
+    }
+  }
+
+  function formatTrashTime(iso: string) {
+    return new Date(iso).toLocaleString("zh-CN", {
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
+
+  const resourceLabel: Record<TrashItem["resource"], string> = {
+    projects: "项目",
+    progress: "任务",
+    inspiration: "灵感",
+    library: "资料",
+    checkins: "打卡",
+  };
+
   return (
     <div className="flex flex-col gap-10">
       <section className="rounded-2xl border border-line/70 bg-card p-6 sm:p-8">
@@ -178,6 +228,58 @@ export default function AdminPanel({
         >
           导出 JSON 备份
         </a>
+      </section>
+
+      <section className="rounded-2xl border border-line/70 bg-card p-6 sm:p-8">
+        <h2 className="text-sm font-medium text-ink mb-1">回收站</h2>
+        <p className="text-xs text-ink-soft mb-5">
+          最近删除的项目、任务、灵感、资料和打卡会先进入这里，管理员可以恢复或永久删除。
+        </p>
+        {trashError && <p className="text-xs text-red-400 mb-3">{trashError}</p>}
+        <div className="flex flex-col gap-3">
+          {trash.map((item) => {
+            const key = `${item.resource}:${item.id}`;
+            return (
+              <div
+                key={key}
+                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1 py-3 border-b border-line/70 last:border-b-0"
+              >
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-paper-soft text-ink-soft">
+                      {resourceLabel[item.resource]}
+                    </span>
+                    <p className="text-sm font-medium text-ink truncate">{item.title}</p>
+                  </div>
+                  <p className="mt-1 text-xs text-ink-soft">
+                    {item.subtitle ? `${item.subtitle} · ` : ""}
+                    {item.deletedBy ? `${item.deletedBy} 删除 · ` : ""}
+                    {formatTrashTime(item.deletedAt)}
+                  </p>
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => handleTrashAction(item, "restore")}
+                    disabled={trashPending === key}
+                    className="text-xs px-3.5 py-1.5 rounded-full border border-line text-ink-soft hover:text-accent hover:border-accent transition-colors disabled:opacity-50"
+                  >
+                    恢复
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleTrashAction(item, "purge")}
+                    disabled={trashPending === key}
+                    className="text-xs px-3.5 py-1.5 rounded-full border border-line text-ink-soft hover:text-red-300 hover:border-red-300/60 transition-colors disabled:opacity-50"
+                  >
+                    永久删除
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+          {trash.length === 0 && <p className="text-sm text-ink-soft">回收站是空的。</p>}
+        </div>
       </section>
 
       <section className="rounded-2xl border border-line/70 bg-card p-6 sm:p-8">

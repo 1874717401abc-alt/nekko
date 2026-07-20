@@ -3,7 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { recordItemActivity } from "@/lib/activity";
 import {
   deleteDataItem,
-  deleteProjectAndUnlink,
+  deleteProjectItem,
   isItemResource,
   listDataItems,
   updateDataItem,
@@ -78,7 +78,7 @@ export async function DELETE(
   }
 
   if (resource === "projects") {
-    const ok = deleteProjectAndUnlink(id);
+    const ok = deleteProjectItem(id, user);
     if (ok) {
       recordItemActivity("delete", resource, existing, user);
       return NextResponse.json({ ok: true });
@@ -86,7 +86,7 @@ export async function DELETE(
     return NextResponse.json({ error: "记录不存在" }, { status: 404 });
   }
 
-  const deleted = deleteDataItem<ResourceItem>(resource, id);
+  const deleted = deleteDataItem<ResourceItem>(resource, id, user);
   if (!deleted) {
     return NextResponse.json({ error: "记录不存在" }, { status: 404 });
   }

@@ -9,6 +9,9 @@ export type InspirationItem = {
   createdBy: string;
   createdById?: string;
   projectId?: string;
+  deletedAt?: string;
+  deletedBy?: string;
+  deletedById?: string;
 };
 
 export type LibraryItem = {
@@ -22,6 +25,9 @@ export type LibraryItem = {
   createdBy: string;
   createdById?: string;
   projectId?: string;
+  deletedAt?: string;
+  deletedBy?: string;
+  deletedById?: string;
 };
 
 export type Project = {
@@ -32,6 +38,9 @@ export type Project = {
   createdAt: string;
   createdBy: string;
   createdById?: string;
+  deletedAt?: string;
+  deletedBy?: string;
+  deletedById?: string;
 };
 
 export type TaskStatus = "todo" | "doing" | "done";
@@ -67,9 +76,20 @@ export type ProgressTask = {
   logs?: ProgressLogEntry[];
   comments?: ProgressComment[];
   projectId?: string;
+  deletedAt?: string;
+  deletedBy?: string;
+  deletedById?: string;
 };
 
-export type ActivityType = "create" | "update" | "delete" | "log" | "comment" | "checkin";
+export type ActivityType =
+  | "create"
+  | "update"
+  | "delete"
+  | "restore"
+  | "purge"
+  | "log"
+  | "comment"
+  | "checkin";
 
 export type ActivityEvent = {
   id: string;
@@ -121,4 +141,18 @@ export type CheckIn = {
   date: string; // YYYY-MM-DD
   time: string; // ISO timestamp
   note?: string;
+  deletedAt?: string;
+  deletedBy?: string;
+  deletedById?: string;
+};
+
+export type TrashResource = "projects" | "progress" | "inspiration" | "library" | "checkins";
+
+export type TrashItem = {
+  resource: TrashResource;
+  id: string;
+  title: string;
+  subtitle?: string;
+  deletedAt: string;
+  deletedBy?: string;
 };

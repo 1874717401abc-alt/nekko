@@ -75,7 +75,7 @@ export default function ProjectsBoard({
   async function handleDelete(id: string) {
     const project = projects.find((p) => p.id === id);
     if (!project) return;
-    if (!window.confirm(`确定删除「${project.name}」吗？关联内容会保留，但会移出这个项目。`)) return;
+    if (!window.confirm(`确定删除「${project.name}」吗？项目会进入回收站，关联内容会保留。`)) return;
 
     setPendingId(id);
     setError(null);

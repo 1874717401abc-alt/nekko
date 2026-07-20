@@ -16,6 +16,8 @@ const actionLabels: Record<ActivityType, string> = {
   create: "新建了",
   update: "更新了",
   delete: "删除了",
+  restore: "恢复了",
+  purge: "永久删除了",
   log: "记录了进度",
   comment: "评论了",
   checkin: "完成了",

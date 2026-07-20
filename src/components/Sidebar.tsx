@@ -21,6 +21,17 @@ const navItems: { href: string; label: string; sub: string; icon: ReactNode }[] 
     ),
   },
   {
+    href: "/search",
+    label: "搜索",
+    sub: "Search",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4">
+        <circle cx="11" cy="11" r="6.5" />
+        <path d="M20 20l-3.5-3.5" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  {
     href: "/checkin",
     label: "打卡",
     sub: "Check-in",

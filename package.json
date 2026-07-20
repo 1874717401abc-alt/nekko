@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "deploy": "ssh root@8.137.193.65 'bash /opt/nekko/deploy/deploy.sh'"
   },
   "dependencies": {
     "better-sqlite3": "^12.10.0",

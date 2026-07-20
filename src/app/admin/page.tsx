@@ -3,7 +3,7 @@ import PageHeader from "@/components/PageHeader";
 import AdminPanel from "@/components/AdminPanel";
 import { getCurrentUser } from "@/lib/auth";
 import { listUsers } from "@/lib/users";
-import { readData } from "@/lib/store";
+import { listTrashItems, readData } from "@/lib/store";
 import { mergeHeroContent } from "@/lib/heroContent";
 import type { HeroContent } from "@/lib/types";
 
@@ -18,10 +18,11 @@ export default async function AdminPage() {
     redirect("/");
   }
 
-  const [users, heroImages, heroContentRaw] = await Promise.all([
+  const [users, heroImages, heroContentRaw, trashItems] = await Promise.all([
     Promise.resolve(listUsers()),
     readData<string[]>("hero"),
     readData<Partial<HeroContent>>("heroContent"),
+    Promise.resolve(listTrashItems()),
   ]);
   const heroContent = mergeHeroContent(heroContentRaw);
 
@@ -32,7 +33,13 @@ export default async function AdminPage() {
         title="管理控制台"
         description="管理网站成员权限，更换首页轮播图。"
       />
-      <AdminPanel currentUser={user} users={users} heroImages={heroImages} heroContent={heroContent} />
+      <AdminPanel
+        currentUser={user}
+        users={users}
+        heroImages={heroImages}
+        heroContent={heroContent}
+        trashItems={trashItems}
+      />
     </div>
   );
 }

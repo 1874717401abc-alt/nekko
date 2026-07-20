@@ -43,6 +43,7 @@ yarn-error.log*
 
 # user-uploaded avatars (runtime data)
 /data/uploads/
+/public/uploads/
 
 # typescript
 *.tsbuildinfo

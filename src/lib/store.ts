@@ -1,4 +1,5 @@
 import { getDb } from "@/lib/db";
+import type { TrashItem, TrashResource, User } from "@/lib/types";
 
 export type ResourceName =
   | "inspiration"
@@ -31,7 +32,11 @@ export async function readData<T>(resource: ResourceName): Promise<T> {
     .prepare("SELECT data FROM app_data WHERE resource = ?")
     .get(resource) as { data: string } | undefined;
 
-  return (row ? JSON.parse(row.data) : []) as T;
+  const parsed = row ? JSON.parse(row.data) : [];
+  if (isItemResource(resource) && Array.isArray(parsed)) {
+    return activeResourceItems(parsed) as T;
+  }
+  return parsed as T;
 }
 
 export async function writeData<T>(resource: ResourceName, data: T): Promise<void> {
@@ -54,7 +59,9 @@ export function isItemResource(name: string): name is ItemResourceName {
   );
 }
 
-function readResourceItems<T extends { id: string }>(resource: ItemResourceName): T[] {
+function readResourceItems<T extends { id: string; deletedAt?: unknown }>(
+  resource: ItemResourceName
+): T[] {
   const db = getDb();
   const row = db
     .prepare("SELECT data FROM app_data WHERE resource = ?")
@@ -65,7 +72,19 @@ function readResourceItems<T extends { id: string }>(resource: ItemResourceName)
   return Array.isArray(parsed) ? (parsed as T[]) : [];
 }
 
-function writeResourceItems<T extends { id: string }>(
+function isDeletedResourceItem(item: { deletedAt?: unknown }) {
+  return typeof item.deletedAt === "string" && item.deletedAt.length > 0;
+}
+
+function activeResourceItems<T extends { deletedAt?: unknown }>(items: T[]): T[] {
+  return items.filter((item) => !isDeletedResourceItem(item));
+}
+
+function deletedResourceItems<T extends { deletedAt?: unknown }>(items: T[]): T[] {
+  return items.filter((item) => isDeletedResourceItem(item));
+}
+
+function writeResourceItems<T extends { id: string; deletedAt?: unknown }>(
   resource: ItemResourceName,
   items: T[]
 ): T[] {
@@ -77,11 +96,25 @@ function writeResourceItems<T extends { id: string }>(
   return items;
 }
 
-export function listDataItems<T extends { id: string }>(resource: ItemResourceName): T[] {
+export function listDataItems<T extends { id: string; deletedAt?: unknown }>(
+  resource: ItemResourceName
+): T[] {
+  return activeResourceItems(readResourceItems<T>(resource));
+}
+
+export function listAllDataItems<T extends { id: string; deletedAt?: unknown }>(
+  resource: ItemResourceName
+): T[] {
   return readResourceItems<T>(resource);
 }
 
-export function insertDataItem<T extends { id: string }>(
+export function listDeletedDataItems<T extends { id: string; deletedAt?: unknown }>(
+  resource: ItemResourceName
+): T[] {
+  return deletedResourceItems(readResourceItems<T>(resource));
+}
+
+export function insertDataItem<T extends { id: string; deletedAt?: unknown }>(
   resource: ItemResourceName,
   item: T
 ): T {
@@ -97,7 +130,7 @@ export function insertDataItem<T extends { id: string }>(
   return tx();
 }
 
-export function updateDataItem<T extends { id: string }>(
+export function updateDataItem<T extends { id: string; deletedAt?: unknown }>(
   resource: ItemResourceName,
   id: string,
   updater: (item: T) => T
@@ -108,6 +141,7 @@ export function updateDataItem<T extends { id: string }>(
     let updated: T | null = null;
     const next = items.map((item) => {
       if (item.id !== id) return item;
+      if (isDeletedResourceItem(item)) return item;
       updated = updater(item);
       return updated;
     });
@@ -118,7 +152,34 @@ export function updateDataItem<T extends { id: string }>(
   return tx();
 }
 
-export function deleteDataItem<T extends { id: string }>(
+export function deleteDataItem<T extends { id: string; deletedAt?: unknown }>(
+  resource: ItemResourceName,
+  id: string,
+  user?: Pick<User, "id" | "displayName">
+): T | null {
+  const db = getDb();
+  const tx = db.transaction(() => {
+    const items = readResourceItems<T>(resource);
+    let item: T | null = null;
+    const deletedAt = new Date().toISOString();
+    const next = items.map((entry) => {
+      if (entry.id !== id || isDeletedResourceItem(entry)) return entry;
+      item = {
+        ...entry,
+        deletedAt,
+        deletedBy: user?.displayName,
+        deletedById: user?.id,
+      } as T;
+      return item;
+    });
+    if (!item) return null;
+    writeResourceItems(resource, next);
+    return item;
+  });
+  return tx();
+}
+
+export function hardDeleteDataItem<T extends { id: string; deletedAt?: unknown }>(
   resource: ItemResourceName,
   id: string
 ): T | null {
@@ -136,30 +197,106 @@ export function deleteDataItem<T extends { id: string }>(
   return tx();
 }
 
-export function deleteProjectAndUnlink(projectId: string): boolean {
+export function restoreDataItem<T extends { id: string; deletedAt?: unknown }>(
+  resource: ItemResourceName,
+  id: string
+): T | null {
+  const db = getDb();
+  const tx = db.transaction(() => {
+    const items = readResourceItems<T>(resource);
+    let restored: T | null = null;
+    const next = items.map((item) => {
+      if (item.id !== id || !isDeletedResourceItem(item)) return item;
+      restored = Object.fromEntries(
+        Object.entries(item).filter(
+          ([key]) => !["deletedAt", "deletedBy", "deletedById"].includes(key)
+        )
+      ) as T;
+      return restored;
+    });
+    if (!restored) return null;
+    writeResourceItems(resource, next);
+    return restored;
+  });
+  return tx();
+}
+
+export function deleteProjectItem(
+  projectId: string,
+  user?: Pick<User, "id" | "displayName">
+): boolean {
+  return !!deleteDataItem("projects", projectId, user);
+}
+
+export function hardDeleteProjectAndUnlink(projectId: string): ResourceItem | null {
   const db = getDb();
   const tx = db.transaction(() => {
     const projects = readResourceItems<ResourceItem>("projects");
-    const exists = projects.some((project) => project.id === projectId);
-    if (!exists) return false;
+    const project = projects.find((entry) => entry.id === projectId) ?? null;
+    if (!project) return null;
 
     writeResourceItems(
       "projects",
-      projects.filter((project) => project.id !== projectId)
+      projects.filter((entry) => entry.id !== projectId)
     );
 
-    for (const resource of ["inspiration", "library", "progress"] as const) {
+    const linkedResources: ItemResourceName[] = ["inspiration", "library", "progress"];
+    for (const resource of linkedResources) {
       const items = readResourceItems<ResourceItem>(resource);
+      let changed = false;
       const next = items.map((item) => {
         if (item.projectId !== projectId) return item;
-        return Object.fromEntries(
-          Object.entries(item).filter(([key]) => key !== "projectId")
-        ) as ResourceItem;
+        changed = true;
+        const rest = { ...item };
+        delete rest.projectId;
+        return rest;
       });
-      writeResourceItems(resource, next);
+      if (changed) {
+        writeResourceItems(resource, next);
+      }
     }
 
-    return true;
+    return project;
   });
   return tx();
+}
+
+function titleFromTrashItem(item: ResourceItem): string {
+  for (const key of ["title", "name", "note", "memberName"]) {
+    const value = item[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return "未命名";
+}
+
+function subtitleFromTrashItem(resource: ItemResourceName, item: ResourceItem): string | undefined {
+  if (resource === "checkins") {
+    return typeof item.date === "string" ? item.date : undefined;
+  }
+  if (resource === "progress") {
+    return typeof item.assignee === "string" ? `负责人：${item.assignee}` : undefined;
+  }
+  if (resource === "library") {
+    return typeof item.category === "string" ? item.category : undefined;
+  }
+  if (resource === "inspiration" && Array.isArray(item.tags) && item.tags.length > 0) {
+    return item.tags.filter((tag) => typeof tag === "string").join(", ");
+  }
+  return undefined;
+}
+
+export function listTrashItems(): TrashItem[] {
+  const resources: TrashResource[] = ["projects", "progress", "inspiration", "library", "checkins"];
+  return resources
+    .flatMap((resource) =>
+      listDeletedDataItems<ResourceItem>(resource).map((item) => ({
+        resource,
+        id: item.id,
+        title: titleFromTrashItem(item),
+        subtitle: subtitleFromTrashItem(resource, item),
+        deletedAt: String(item.deletedAt),
+        deletedBy: typeof item.deletedBy === "string" ? item.deletedBy : undefined,
+      }))
+    )
+    .sort((a, b) => +new Date(b.deletedAt) - +new Date(a.deletedAt));
 }

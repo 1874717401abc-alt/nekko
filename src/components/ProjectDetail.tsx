@@ -87,7 +87,7 @@ export default function ProjectDetail({
   }
 
   async function handleDelete() {
-    if (!window.confirm(`确定删除「${project.name}」吗？关联内容会保留，但会移出这个项目。`)) {
+    if (!window.confirm(`确定删除「${project.name}」吗？项目会进入回收站，关联内容会保留。`)) {
       return;
     }
 
