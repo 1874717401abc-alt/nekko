@@ -1,24 +1,24 @@
 @import "tailwindcss";
 
 :root {
-  --color-paper: #0a0e14;
-  --color-paper-soft: #10151d;
-  --color-ink: #eef1f5;
-  --color-ink-soft: #8a93a3;
-  --color-line: #242b37;
-  --color-accent: #22d3ee;
-  --color-accent-soft: #0e2e38;
-  --color-card: #151b25;
+  --color-paper: #0c0c0d;
+  --color-paper-soft: #111214;
+  --color-ink: #f3f1ec;
+  --color-ink-soft: #96969b;
+  --color-line: #292a2e;
+  --color-accent: #ff6542;
+  --color-accent-soft: #321811;
+  --color-card: #17181b;
 }
 
 :root.light {
-  --color-paper: #f5f7fa;
-  --color-paper-soft: #eef1f5;
-  --color-ink: #161a20;
-  --color-ink-soft: #6b7280;
-  --color-line: #e2e6eb;
-  --color-accent: #0891b2;
-  --color-accent-soft: #cffafe;
+  --color-paper: #f4f3ef;
+  --color-paper-soft: #ebeae5;
+  --color-ink: #19191b;
+  --color-ink-soft: #707075;
+  --color-line: #d8d6cf;
+  --color-accent: #e54d2e;
+  --color-accent-soft: #ffe1d8;
   --color-card: #ffffff;
 }
 
@@ -50,23 +50,11 @@ body {
 }
 
 body {
-  background:
-    radial-gradient(ellipse 900px 600px at 12% -10%, rgba(34, 211, 238, 0.08), transparent 60%),
-    radial-gradient(ellipse 700px 600px at 95% 15%, rgba(59, 130, 246, 0.07), transparent 60%),
-    var(--color-paper);
-  background-attachment: fixed;
+  background: var(--color-paper);
   color: var(--color-ink);
   font-family: var(--font-inter), "Noto Sans SC", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   transition: background-color 0.3s ease, color 0.3s ease;
-}
-
-:root.light body {
-  background:
-    radial-gradient(ellipse 900px 600px at 12% -10%, rgba(34, 211, 238, 0.05), transparent 60%),
-    radial-gradient(ellipse 700px 600px at 95% 15%, rgba(59, 130, 246, 0.04), transparent 60%),
-    var(--color-paper);
-  background-attachment: fixed;
 }
 
 .font-serif-display {

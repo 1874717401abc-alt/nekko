@@ -11,7 +11,11 @@ export default function AppShell({ children }: { children: ReactNode }) {
   return (
     <>
       <Sidebar />
-      <main className={`flex-1 min-h-screen ${isAuthPage ? "" : "md:ml-64"}`}>{children}</main>
+      <main
+        className={`min-h-screen min-w-0 flex-1 ${isAuthPage ? "" : "pb-20 md:ml-60 md:pb-0"}`}
+      >
+        {children}
+      </main>
     </>
   );
 }

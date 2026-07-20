@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import AgentTaskCenter from "@/components/AgentTaskCenter";
-import PageHeader from "@/components/PageHeader";
 import { getAgentTaskRunDetail, listAgentTaskRuns } from "@/lib/agentTasks";
 import { getCurrentUser } from "@/lib/auth";
 
@@ -16,12 +15,19 @@ export default async function AgentPage() {
   const initialRun = runs[0] ? getAgentTaskRunDetail(runs[0].id, currentUser.id) : null;
 
   return (
-    <div className="px-6 sm:px-10 lg:px-16 py-14 sm:py-20 max-w-7xl mx-auto">
-      <PageHeader
-        eyebrow="Agent Runner"
-        title="任务执行中心"
-        description="让 Agent 先自主判断完整路径，能执行的立即执行，未接入的平台动作先沉淀成待接入步骤。"
-      />
+    <div className="mx-auto min-h-screen max-w-[1540px] px-4 pb-8 pt-6 sm:px-6 sm:pt-8 lg:px-10 lg:pb-10">
+      <header className="mb-5 flex items-end justify-between border-b border-line pb-5 sm:mb-6">
+        <div>
+          <p className="mb-1 text-xs text-ink-soft">Agent Workspace</p>
+          <h1 className="text-2xl font-semibold text-ink sm:text-3xl">执行中心</h1>
+        </div>
+        <div className="hidden items-center gap-2 text-xs text-ink-soft sm:flex">
+          <span className="h-2 w-2 rounded-full bg-emerald-400" />
+          自主执行中
+          <span className="text-line">/</span>
+          {runs.length} 条任务
+        </div>
+      </header>
       <AgentTaskCenter initialRuns={runs} initialRun={initialRun} />
     </div>
   );

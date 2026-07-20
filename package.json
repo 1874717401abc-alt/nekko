@@ -12,6 +12,7 @@
   "dependencies": {
     "better-sqlite3": "^12.10.0",
     "framer-motion": "^12.40.0",
+    "lucide-react": "^1.25.0",
     "mammoth": "^1.12.0",
     "next": "16.2.9",
     "pdf-parse": "^2.4.5",

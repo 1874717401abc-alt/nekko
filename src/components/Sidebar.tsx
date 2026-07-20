@@ -3,169 +3,77 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import type { LucideIcon } from "lucide-react";
+import {
+  Bot,
+  CheckCircle2,
+  Clapperboard,
+  FolderOpen,
+  HeartHandshake,
+  Home,
+  LayoutDashboard,
+  Lightbulb,
+  LogIn,
+  Menu,
+  Search,
+  ShieldCheck,
+  UserRound,
+  Users,
+  Workflow,
+  X,
+} from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import UserMenu from "@/components/UserMenu";
 import type { User } from "@/lib/types";
 
-const navItems: { href: string; label: string; sub: string; icon: ReactNode }[] = [
+type NavItem = {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+};
+
+const navGroups: { label: string; items: NavItem[] }[] = [
   {
-    href: "/",
-    label: "主页",
-    sub: "Home",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4">
-        <circle cx="12" cy="12" r="9" />
-        <path d="M10 8.5v7l6-3.5-6-3.5Z" fill="currentColor" stroke="none" />
-      </svg>
-    ),
+    label: "工作台",
+    items: [
+      { href: "/", label: "主页", icon: Home },
+      { href: "/assistant", label: "AI 助手", icon: Bot },
+      { href: "/agent", label: "执行中心", icon: Workflow },
+    ],
   },
   {
-    href: "/assistant",
-    label: "AI 助手",
-    sub: "Copilot",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4">
-        <path d="M12 3.5l1.2 4.1 4.1 1.2-4.1 1.2L12 14l-1.2-4-4.1-1.2 4.1-1.2L12 3.5Z" strokeLinejoin="round" />
-        <path d="M18 13.5l.8 2.3 2.2.7-2.2.7-.8 2.3-.8-2.3-2.2-.7 2.2-.7.8-2.3Z" strokeLinejoin="round" />
-        <path d="M6 14.5l.6 1.6 1.5.5-1.5.5-.6 1.6-.6-1.6-1.5-.5 1.5-.5.6-1.6Z" strokeLinejoin="round" />
-      </svg>
-    ),
+    label: "创作",
+    items: [
+      { href: "/inspiration", label: "灵感库", icon: Lightbulb },
+      { href: "/library", label: "资料库", icon: FolderOpen },
+      { href: "/progress", label: "进度看板", icon: LayoutDashboard },
+      { href: "/projects", label: "项目", icon: Clapperboard },
+    ],
   },
   {
-    href: "/agent",
-    label: "执行中心",
-    sub: "Agent",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4">
-        <path d="M7 4h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" />
-        <path d="M8.5 9.2h7M8.5 13h4.8" strokeLinecap="round" />
-        <path d="m14 16.3 1.4 1.4 3-3.4" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    ),
-  },
-  {
-    href: "/search",
-    label: "搜索",
-    sub: "Search",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4">
-        <circle cx="11" cy="11" r="6.5" />
-        <path d="M20 20l-3.5-3.5" strokeLinecap="round" />
-      </svg>
-    ),
-  },
-  {
-    href: "/checkin",
-    label: "打卡",
-    sub: "Check-in",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4">
-        <circle cx="12" cy="12" r="9" />
-        <path d="M8 12.5l2.5 2.5L16 9.5" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    ),
-  },
-  {
-    href: "/inspiration",
-    label: "灵感库",
-    sub: "Inspiration",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4">
-        <path d="M9 18h6" strokeLinecap="round" />
-        <path d="M10 21h4" strokeLinecap="round" />
-        <path d="M12 3a6 6 0 0 0-3.7 10.7c.5.4.7 1 .7 1.6V16h6v-.7c0-.6.3-1.2.7-1.6A6 6 0 0 0 12 3Z" />
-      </svg>
-    ),
-  },
-  {
-    href: "/library",
-    label: "资料库",
-    sub: "Library",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4">
-        <path d="M4 19.5V5.2c0-.7.5-1.2 1.2-1.2H10l1.6 2h7.2c.7 0 1.2.5 1.2 1.2V19c0 .7-.5 1-1.2 1H5.2c-.7 0-1.2-.3-1.2-1Z" />
-      </svg>
-    ),
-  },
-  {
-    href: "/progress",
-    label: "进度看板",
-    sub: "Progress",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4">
-        <rect x="3" y="4" width="18" height="17" rx="1.5" />
-        <path d="M3 9h18" />
-        <path d="M8 13h2M8 17h5" strokeLinecap="round" />
-      </svg>
-    ),
-  },
-  {
-    href: "/projects",
-    label: "项目",
-    sub: "Projects",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4">
-        <path d="M3.5 6.2c0-.7.6-1.2 1.2-1.2H10l1.6 2h7.7c.7 0 1.2.5 1.2 1.2V18c0 .7-.5 1.2-1.2 1.2H4.7c-.7 0-1.2-.5-1.2-1.2Z" strokeLinejoin="round" />
-      </svg>
-    ),
-  },
-  {
-    href: "/team",
-    label: "团队",
-    sub: "Team",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4">
-        <circle cx="9" cy="8" r="3" />
-        <path d="M3.5 19c0-2.8 2.5-5 5.5-5s5.5 2.2 5.5 5" strokeLinecap="round" />
-        <circle cx="17" cy="7" r="2.2" />
-        <path d="M16 14.2c2.3.4 4 2.2 4 4.8" strokeLinecap="round" />
-      </svg>
-    ),
-  },
-  {
-    href: "/profile",
-    label: "我的资料",
-    sub: "Profile",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4">
-        <circle cx="12" cy="8" r="3.5" />
-        <path d="M4.5 19.5c0-3.3 3.4-6 7.5-6s7.5 2.7 7.5 6" strokeLinecap="round" />
-      </svg>
-    ),
+    label: "协作",
+    items: [
+      { href: "/search", label: "搜索", icon: Search },
+      { href: "/checkin", label: "打卡", icon: CheckCircle2 },
+      { href: "/team", label: "团队", icon: Users },
+      { href: "/profile", label: "我的资料", icon: UserRound },
+    ],
   },
 ];
 
-const adminNavItem: { href: string; label: string; sub: string; icon: ReactNode } = {
-  href: "/admin",
-  label: "管理",
-  sub: "Console",
-  icon: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4">
-      <path d="M12 3.5 19 7v5c0 4.4-2.9 7.4-7 8.5-4.1-1.1-7-4.1-7-8.5V7l7-3.5Z" strokeLinejoin="round" />
-      <path d="M9 12.2 11 14l4-4" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  ),
-};
-
-const joinUsIcon = (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4">
-    <path d="M12 20.5c-4.8-3-8-6-8-9.5a4.2 4.2 0 0 1 8-1.8A4.2 4.2 0 0 1 20 11c0 3.5-3.2 6.5-8 9.5Z" strokeLinejoin="round" />
-  </svg>
-);
-
-const loginIcon = (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4">
-    <path d="M9 4h-3a1.5 1.5 0 0 0-1.5 1.5v13A1.5 1.5 0 0 0 6 20h3" strokeLinecap="round" strokeLinejoin="round" />
-    <path d="M12 12h9m0 0-3.5-3.5M21 12l-3.5 3.5" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
+const adminNavItem: NavItem = { href: "/admin", label: "管理", icon: ShieldCheck };
+const mobilePrimaryHrefs = ["/", "/assistant", "/agent", "/inspiration"];
 
 type MeState = { user: User | null; guest: boolean };
+
+function isActive(pathname: string | null, href: string) {
+  return href === "/" ? pathname === "/" : pathname?.startsWith(href);
+}
 
 export default function Sidebar() {
   const pathname = usePathname();
   const [me, setMe] = useState<MeState | null>(null);
+  const [moreOpen, setMoreOpen] = useState(false);
   const [joinOpen, setJoinOpen] = useState(false);
 
   useEffect(() => {
@@ -180,174 +88,178 @@ export default function Sidebar() {
   }
 
   const isGuestView = me?.guest === true && !me?.user;
-  const visibleNavItems = isGuestView
-    ? navItems.filter((item) => item.href === "/")
+  const baseItems = navGroups.flatMap((group) => group.items);
+  const visibleItems = isGuestView
+    ? baseItems.filter((item) => item.href === "/")
     : me?.user?.isAdmin
-      ? [...navItems, adminNavItem]
-    : navItems;
+      ? [...baseItems, adminNavItem]
+      : baseItems;
+  const primaryItems = visibleItems.filter((item) => mobilePrimaryHrefs.includes(item.href));
+  const moreItems = visibleItems.filter((item) => !mobilePrimaryHrefs.includes(item.href));
+  const activeItem = visibleItems.find((item) => isActive(pathname, item.href));
 
   return (
     <>
-      {/* Desktop sidebar */}
-      <aside className="hidden md:flex md:flex-col md:fixed md:inset-y-0 md:left-0 md:w-64 border-r border-line bg-paper-soft px-7 py-9">
-        <div className="flex items-start justify-between mb-12">
-          <Link href="/">
-            <div className="font-serif-display italic text-3xl tracking-tight text-ink">
-              Nekko
-            </div>
-            <div className="mt-1 text-[11px] uppercase tracking-[0.25em] text-ink-soft">
-              Studio Workspace
-            </div>
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-line bg-paper-soft md:flex">
+        <div className="flex h-20 items-center justify-between border-b border-line px-5">
+          <Link href="/" className="flex items-baseline gap-2" aria-label="Nekko 主页">
+            <span className="font-serif-display text-2xl italic text-ink">Nekko</span>
+            <span className="text-[10px] text-ink-soft">STUDIO</span>
           </Link>
-          <div className="flex items-center gap-2 shrink-0">
-            <ThemeToggle className="h-8 w-8 shrink-0" />
-            {!isGuestView && <UserMenu className="h-8 w-8 shrink-0" me={me} />}
-          </div>
+          <ThemeToggle className="h-8 w-8" />
         </div>
 
-        <nav className="flex flex-col gap-1">
-          {visibleNavItems.map((item) => {
-            const active =
-              item.href === "/" ? pathname === "/" : pathname?.startsWith(item.href);
+        <nav className="flex-1 overflow-y-auto px-3 py-5" aria-label="主导航">
+          {(isGuestView ? [{ label: "", items: visibleItems }] : navGroups).map((group) => {
+            const groupItems = group.items.filter((item) => visibleItems.some((entry) => entry.href === item.href));
+            if (groupItems.length === 0) return null;
             return (
+              <div key={group.label || "guest"} className="mb-6 last:mb-0">
+                {group.label && (
+                  <p className="mb-2 px-3 text-[10px] font-medium text-ink-soft/65">{group.label}</p>
+                )}
+                <div className="space-y-1">
+                  {groupItems.map((item) => {
+                    const active = isActive(pathname, item.href);
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={`group flex h-10 items-center gap-3 rounded-md px-3 text-sm transition-colors ${
+                          active
+                            ? "bg-card font-medium text-ink shadow-[inset_2px_0_0_var(--color-accent)]"
+                            : "text-ink-soft hover:bg-card/60 hover:text-ink"
+                        }`}
+                      >
+                        <Icon className={`h-[18px] w-[18px] ${active ? "text-accent" : "group-hover:text-ink"}`} strokeWidth={1.7} />
+                        <span>{item.label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+
+          {!isGuestView && me?.user?.isAdmin && (
+            <div className="mt-6 border-t border-line pt-4">
               <Link
-                key={item.href}
-                href={item.href}
-                className={`group flex items-center gap-3 rounded-xl px-3.5 py-3 transition-colors ${
-                  active
-                    ? "bg-card text-ink shadow-sm"
+                href={adminNavItem.href}
+                className={`flex h-10 items-center gap-3 rounded-md px-3 text-sm transition-colors ${
+                  isActive(pathname, adminNavItem.href)
+                    ? "bg-card font-medium text-ink shadow-[inset_2px_0_0_var(--color-accent)]"
                     : "text-ink-soft hover:bg-card/60 hover:text-ink"
                 }`}
               >
-                <span
-                  className={`h-8 w-8 flex items-center justify-center rounded-lg ${
-                    active ? "bg-accent/10 text-accent" : "text-ink-soft group-hover:text-accent"
-                  }`}
-                >
-                  <span className="block h-[18px] w-[18px]">{item.icon}</span>
-                </span>
-                <span>
-                  <span className="block text-sm font-medium leading-tight">{item.label}</span>
-                  <span className="block text-[11px] tracking-wide text-ink-soft/80">
-                    {item.sub}
-                  </span>
-                </span>
+                <ShieldCheck className="h-[18px] w-[18px]" strokeWidth={1.7} />
+                管理
               </Link>
-            );
-          })}
+            </div>
+          )}
 
           {isGuestView && (
-            <>
+            <div className="mt-4 space-y-1 border-t border-line pt-4">
               <button
                 type="button"
                 onClick={() => setJoinOpen(true)}
-                className="group flex items-center gap-3 rounded-xl px-3.5 py-3 text-left text-ink-soft transition-colors hover:bg-card/60 hover:text-ink"
+                className="flex h-10 w-full items-center gap-3 rounded-md px-3 text-sm text-ink-soft hover:bg-card/60 hover:text-ink"
               >
-                <span className="h-8 w-8 flex items-center justify-center rounded-lg text-ink-soft group-hover:text-accent">
-                  <span className="block h-[18px] w-[18px]">{joinUsIcon}</span>
-                </span>
-                <span>
-                  <span className="block text-sm font-medium leading-tight">加入我们</span>
-                  <span className="block text-[11px] tracking-wide text-ink-soft/80">
-                    Join Us
-                  </span>
-                </span>
+                <HeartHandshake className="h-[18px] w-[18px]" strokeWidth={1.7} />
+                加入我们
               </button>
-
-              <Link
-                href="/login"
-                className="group flex items-center gap-3 rounded-xl px-3.5 py-3 text-ink-soft transition-colors hover:bg-card/60 hover:text-ink"
-              >
-                <span className="h-8 w-8 flex items-center justify-center rounded-lg text-ink-soft group-hover:text-accent">
-                  <span className="block h-[18px] w-[18px]">{loginIcon}</span>
-                </span>
-                <span>
-                  <span className="block text-sm font-medium leading-tight">登录/注册</span>
-                  <span className="block text-[11px] tracking-wide text-ink-soft/80">
-                    Sign in
-                  </span>
-                </span>
+              <Link href="/login" className="flex h-10 items-center gap-3 rounded-md px-3 text-sm text-ink-soft hover:bg-card/60 hover:text-ink">
+                <LogIn className="h-[18px] w-[18px]" strokeWidth={1.7} />
+                登录 / 注册
               </Link>
-            </>
+            </div>
           )}
         </nav>
 
-        <div className="mt-auto pt-8 border-t border-line">
-          <p className="font-serif-display italic text-sm text-ink-soft leading-relaxed">
-            “Make something worth watching.”
-          </p>
-        </div>
+        {!isGuestView && (
+          <div className="border-t border-line p-4">
+            <div className="flex items-center gap-3 rounded-md px-2 py-1.5">
+              <UserMenu className="h-9 w-9" me={me} />
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-ink">{me?.user?.displayName || "Nekko"}</p>
+                <p className="truncate text-xs text-ink-soft">{me?.user?.role || "Studio member"}</p>
+              </div>
+            </div>
+          </div>
+        )}
       </aside>
 
-      {/* Mobile top bar */}
-      <header className="md:hidden sticky top-0 z-30 flex items-center gap-2 border-b border-line bg-paper-soft/90 backdrop-blur px-3 py-3">
-        <Link
-          href="/"
-          className="font-serif-display italic text-xl text-ink shrink-0 pl-1"
-        >
-          Nekko
-        </Link>
-        <nav className="flex items-center gap-0.5 overflow-x-auto flex-nowrap ml-auto min-w-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {visibleNavItems.map((item) => {
-            const active =
-              item.href === "/" ? pathname === "/" : pathname?.startsWith(item.href);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`h-9 w-9 shrink-0 flex items-center justify-center rounded-lg ${
-                  active ? "bg-accent/10 text-accent" : "text-ink-soft"
-                }`}
-              >
-                <span className="block h-[18px] w-[18px]">{item.icon}</span>
-              </Link>
-            );
-          })}
-
-          {isGuestView && (
-            <>
-              <button
-                type="button"
-                onClick={() => setJoinOpen(true)}
-                aria-label="加入我们"
-                className="h-9 w-9 shrink-0 flex items-center justify-center rounded-lg text-ink-soft"
-              >
-                <span className="block h-[18px] w-[18px]">{joinUsIcon}</span>
-              </button>
-              <Link
-                href="/login"
-                aria-label="登录/注册"
-                className="h-9 w-9 shrink-0 flex items-center justify-center rounded-lg text-ink-soft"
-              >
-                <span className="block h-[18px] w-[18px]">{loginIcon}</span>
-              </Link>
-            </>
-          )}
-
-          <ThemeToggle className="h-9 w-9 shrink-0 ml-0.5" />
-        </nav>
-        {!isGuestView && <UserMenu className="h-9 w-9 shrink-0" me={me} />}
+      <header className="sticky top-0 z-30 flex h-14 items-center border-b border-line bg-paper/95 px-4 backdrop-blur md:hidden">
+        <Link href="/" className="font-serif-display text-xl italic text-ink">Nekko</Link>
+        {activeItem && <span className="ml-2 border-l border-line pl-2 text-xs text-ink-soft">{activeItem.label}</span>}
+        <div className="ml-auto flex items-center gap-2">
+          <ThemeToggle className="h-8 w-8" />
+          {!isGuestView && <UserMenu className="h-8 w-8" me={me} />}
+        </div>
       </header>
 
+      <nav className={`fixed inset-x-0 bottom-0 z-40 grid h-[68px] border-t border-line bg-paper-soft/95 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden ${isGuestView ? "grid-cols-3" : "grid-cols-5"}`} aria-label="手机主导航">
+        {primaryItems.map((item) => {
+          const active = isActive(pathname, item.href);
+          const Icon = item.icon;
+          return (
+            <Link key={item.href} href={item.href} className={`flex min-w-0 flex-col items-center justify-center gap-1 text-[10px] ${active ? "text-accent" : "text-ink-soft"}`}>
+              <Icon className="h-5 w-5" strokeWidth={active ? 2 : 1.7} />
+              <span className="truncate">{item.label}</span>
+            </Link>
+          );
+        })}
+        {isGuestView ? (
+          <>
+            <button type="button" onClick={() => setJoinOpen(true)} className="flex flex-col items-center justify-center gap-1 text-[10px] text-ink-soft">
+              <HeartHandshake className="h-5 w-5" strokeWidth={1.7} />
+              <span>加入</span>
+            </button>
+            <Link href="/login" className="flex flex-col items-center justify-center gap-1 text-[10px] text-ink-soft">
+              <LogIn className="h-5 w-5" strokeWidth={1.7} />
+              <span>登录</span>
+            </Link>
+          </>
+        ) : (
+          <button type="button" onClick={() => setMoreOpen(true)} className={`flex flex-col items-center justify-center gap-1 text-[10px] ${moreItems.some((item) => isActive(pathname, item.href)) ? "text-accent" : "text-ink-soft"}`} aria-label="更多导航">
+            <Menu className="h-5 w-5" strokeWidth={1.7} />
+            <span>更多</span>
+          </button>
+        )}
+      </nav>
+
+      {moreOpen && (
+        <div className="fixed inset-0 z-50 bg-black/55 md:hidden" onClick={() => setMoreOpen(false)}>
+          <div className="absolute inset-x-0 bottom-0 rounded-t-lg border-t border-line bg-card p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]" onClick={(event) => event.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between">
+              <p className="text-sm font-medium text-ink">全部功能</p>
+              <button type="button" onClick={() => setMoreOpen(false)} className="flex h-9 w-9 items-center justify-center rounded-md text-ink-soft" aria-label="关闭更多导航">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {moreItems.map((item) => {
+                const Icon = item.icon;
+                const active = isActive(pathname, item.href);
+                return (
+                  <Link key={item.href} href={item.href} onClick={() => setMoreOpen(false)} className={`flex h-20 flex-col items-center justify-center gap-2 rounded-md border text-xs ${active ? "border-accent bg-accent-soft text-accent" : "border-line bg-paper text-ink-soft"}`}>
+                    <Icon className="h-5 w-5" strokeWidth={1.7} />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
       {joinOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-6"
-          onClick={() => setJoinOpen(false)}
-        >
-          <div
-            className="w-full max-w-sm rounded-2xl border border-line bg-card p-6 text-center"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="font-serif-display text-2xl text-ink mb-3">加入我们</h3>
-            <p className="text-sm text-ink-soft leading-relaxed mb-1">
-              欢迎联系我们，一起加入 Nekko Studio：
-            </p>
-            <p className="text-base font-medium text-accent mb-6">NEKKOTOhare vx</p>
-            <button
-              type="button"
-              onClick={() => setJoinOpen(false)}
-              className="rounded-full bg-accent text-paper text-sm font-medium px-6 py-2 transition-opacity hover:opacity-90"
-            >
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-6" onClick={() => setJoinOpen(false)}>
+          <div className="w-full max-w-sm rounded-lg border border-line bg-card p-6 text-center" onClick={(event) => event.stopPropagation()}>
+            <h3 className="text-xl font-semibold text-ink">加入我们</h3>
+            <p className="mt-3 text-sm leading-relaxed text-ink-soft">欢迎联系 Nekko Studio</p>
+            <p className="mt-1 text-base font-medium text-accent">NEKKOTOhare vx</p>
+            <button type="button" onClick={() => setJoinOpen(false)} className="mt-6 rounded-md bg-accent px-6 py-2 text-sm font-medium text-white">
               知道了
             </button>
           </div>
