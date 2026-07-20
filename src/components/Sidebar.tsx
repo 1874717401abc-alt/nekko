@@ -21,6 +21,18 @@ const navItems: { href: string; label: string; sub: string; icon: ReactNode }[] 
     ),
   },
   {
+    href: "/assistant",
+    label: "AI 助手",
+    sub: "Copilot",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4">
+        <path d="M12 3.5l1.2 4.1 4.1 1.2-4.1 1.2L12 14l-1.2-4-4.1-1.2 4.1-1.2L12 3.5Z" strokeLinejoin="round" />
+        <path d="M18 13.5l.8 2.3 2.2.7-2.2.7-.8 2.3-.8-2.3-2.2-.7 2.2-.7.8-2.3Z" strokeLinejoin="round" />
+        <path d="M6 14.5l.6 1.6 1.5.5-1.5.5-.6 1.6-.6-1.6-1.5-.5 1.5-.5.6-1.6Z" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  {
     href: "/search",
     label: "搜索",
     sub: "Search",

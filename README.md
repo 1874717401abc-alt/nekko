@@ -17,9 +17,13 @@ npm run dev
 
 - `SESSION_SECRET`: 登录态签名密钥，生产环境必须是长随机字符串。
 - `TEAM_INVITE_CODE`: 成员注册邀请码。
+- `DEEPSEEK_API_KEY`: DeepSeek API Key，用于站内 AI 助手，必须只放在服务器环境变量或 `.env.local`。
+- `DEEPSEEK_BASE_URL`: DeepSeek API 地址，默认 `https://api.deepseek.com`。
+- `DEEPSEEK_MODEL`: AI 助手使用的模型，默认 `deepseek-v4-flash`。
 
 ## 功能结构
 
+- `/assistant`: AI 助手，读取工作台项目、任务、灵感、资料、打卡和动态，输出创作策略、文案、复盘和行动建议。
 - `/search`: 全局搜索，覆盖项目、任务、资料、灵感、进度记录和评论。
 - `/projects`: 管理项目，并把任务、资料、灵感归到具体项目下。
 - `/progress`: 任务看板，支持任务状态流转。
@@ -37,6 +41,8 @@ npm run dev
 业务数据通过单条新增、编辑、删除接口保存，避免前端整表覆盖造成多人协作时的数据丢失。删除项目、任务、灵感、资料和打卡时会先进入回收站，管理员可在 `/admin` 恢复或永久删除。关键动作会写入 `activity` 活动记录，用于首页团队动态和后续排查。
 
 线上运行时，`data/nekko.db`、`data/uploads` 和 `public/uploads` 都是运行数据，不应直接提交到仓库。
+
+AI 助手通过服务端接口调用 DeepSeek，前端不会接触 API Key。当前版本是只读助手，会基于工作台上下文给建议，不会直接改任务、删资料或发布内容。
 
 ## 部署
 
