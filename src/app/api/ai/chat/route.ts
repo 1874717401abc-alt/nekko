@@ -15,6 +15,7 @@ import {
   updateAiConversation,
 } from "@/lib/aiConversations";
 import { extractUrlAttachmentsFromText } from "@/lib/aiSources";
+import { recordWorkspaceAgentTask } from "@/lib/agentTasks";
 import { runWorkspaceAgent } from "@/lib/workspaceAgent";
 import type { AiAttachment, AiMessage, AiMode } from "@/lib/types";
 
@@ -215,6 +216,14 @@ export async function POST(req: NextRequest) {
       conversationId: conversation.id,
       user,
     });
+    const run = recordWorkspaceAgentTask({
+      prompt: userMessage.content,
+      mode,
+      user,
+      summary: completion.content,
+      actions: completion.plannedActions,
+      results: completion.actions,
+    });
 
     const assistantMessage = appendAiMessage({
       conversationId: conversation.id,
@@ -240,6 +249,7 @@ export async function POST(req: NextRequest) {
       backend: completion.backend,
       fallbackFrom: completion.fallbackFrom,
       actions: completion.actions,
+      run,
     });
   } catch (error) {
     if (error instanceof AgentRequestError) {

@@ -19,7 +19,6 @@ import {
   ShieldCheck,
   UserRound,
   Users,
-  Workflow,
   X,
 } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -37,8 +36,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
     label: "工作台",
     items: [
       { href: "/", label: "主页", icon: Home },
-      { href: "/assistant", label: "AI 助手", icon: Bot },
-      { href: "/agent", label: "执行中心", icon: Workflow },
+      { href: "/agent", label: "AI 工作台", icon: Bot },
     ],
   },
   {
@@ -62,7 +60,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
 ];
 
 const adminNavItem: NavItem = { href: "/admin", label: "管理", icon: ShieldCheck };
-const mobilePrimaryHrefs = ["/", "/assistant", "/agent", "/inspiration"];
+const mobilePrimaryHrefs = ["/", "/agent", "/inspiration", "/progress"];
 
 type MeState = { user: User | null; guest: boolean };
 

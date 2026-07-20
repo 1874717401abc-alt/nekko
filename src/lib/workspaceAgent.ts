@@ -1,4 +1,4 @@
-import { recordItemActivity } from "@/lib/activity";
+import { recordActivity, recordItemActivity } from "@/lib/activity";
 import {
   type AgentMessage,
   type AgentCompletion,
@@ -21,7 +21,8 @@ export type WorkspaceAgentActionName =
   | "create_inspiration"
   | "create_library"
   | "run_content_radar"
-  | "normalize_inspiration_tags";
+  | "normalize_inspiration_tags"
+  | "organize_inspirations";
 
 export type WorkspaceAgentAction = {
   action?: string;
@@ -46,6 +47,7 @@ export type WorkspaceActionResult = {
 
 export type WorkspaceAgentCompletion = AgentCompletion & {
   actions: WorkspaceActionResult[];
+  plannedActions: WorkspaceAgentAction[];
 };
 
 const MAX_ACTIONS_PER_TURN = 12;
@@ -56,6 +58,7 @@ const ACTIONS = new Set<WorkspaceAgentActionName>([
   "create_library",
   "run_content_radar",
   "normalize_inspiration_tags",
+  "organize_inspirations",
 ]);
 
 function isAgentActionName(value: unknown): value is WorkspaceAgentActionName {
@@ -101,6 +104,7 @@ export function workspaceActionLabel(action: WorkspaceAgentActionName | string) 
     create_library: "创建资料",
     run_content_radar: "运行内容雷达",
     normalize_inspiration_tags: "整理灵感标签",
+    organize_inspirations: "智能整理灵感",
   };
   const openActionLabels: Record<string, string> = {
     external_publish: "外部平台发布",
@@ -184,7 +188,9 @@ function actionInstruction() {
     "- create_library: data = { title, type?, url, category?, note?, projectId?, projectName?, projectRef? }",
     "- run_content_radar: data = { limit? }，用于用户要求采集/扒 B站/生成今日趋势灵感。",
     "- normalize_inspiration_tags: data = { scope?, tags? }，用于用户要求整理灵感标签、清理内容雷达标签、B站趋势标签太多。scope 可为 ai_radar、bilibili、all；默认 ai_radar。tags 默认 [\"AI选题\", \"B站热门\"]。",
+    "- organize_inspirations: data = { scope? }，用于用户要求整理、归类、清理整个灵感库。scope 可为 all、recent、bilibili；默认 all。它会统一主题标签并标记疑似重复，但不会删除原内容。",
     "如果用户说“内容雷达/B站趋势/每天扒的灵感标签太多、不要每条造标签、统一标签、整理标签”，必须生成 normalize_inspiration_tags 动作。",
+    "如果用户说“整理灵感、归类灵感、清理灵感库、帮我收拾灵感”，必须生成 organize_inspirations 动作；除非用户明确只要求整理内容雷达标签。",
     "未接入、外部平台或高风险动作也要照常规划，不要省略；action 使用清晰的 snake_case 名称，例如 publish_bilibili、publish_xiaohongshu、external_login、browser_research、send_notification、schedule_recurring_job、install_agent_tool。",
     "这类待接入/待授权动作的 data 要说明 { title?, reason?, requires?, tool?, risk?, next? }，并且不要声称已经完成。",
     "涉及删除、永久删除、改密码、绕过登录、外部账号登录、对外发布、私信/通知、付费、权限变更、抓取非公开内容时，必须规划成待接入/待授权步骤，说明为什么需要这个动作和下一步需要接什么工具。",
@@ -254,6 +260,17 @@ export async function executeWorkspaceAction(input: {
       ok: true,
       title: "灵感标签",
       detail: `已整理 ${result.updated} 条灵感标签，跳过 ${result.skipped} 条。`,
+    };
+  }
+
+  if (name === "organize_inspirations") {
+    const result = organizeInspirations(input.action.data, input.user);
+    return {
+      action: name,
+      ok: true,
+      title: "灵感库整理",
+      detail: `已整理 ${result.processed} 条灵感，归入 ${result.groups} 个主题，标记 ${result.duplicates} 条疑似重复；原内容均已保留。`,
+      resource: "inspiration",
     };
   }
 
@@ -360,6 +377,115 @@ function normalizeInspirationTags(data?: Record<string, unknown>) {
   return { updated, skipped };
 }
 
+const inspirationThemes = [
+  {
+    label: "AI 工具",
+    keywords: ["ai", "人工智能", "gpt", "模型", "agent", "智能体", "提示词", "prompt", "deepseek", "claude"],
+  },
+  {
+    label: "内容方法",
+    keywords: ["选题", "标题", "脚本", "文案", "拍摄", "剪辑", "口播", "封面", "叙事", "创作"],
+  },
+  {
+    label: "平台趋势",
+    keywords: ["b站", "哔哩", "bilibili", "小红书", "抖音", "热门", "趋势", "流量", "涨粉", "算法"],
+  },
+  {
+    label: "商业观察",
+    keywords: ["品牌", "商业", "营销", "广告", "创业", "产品", "用户", "消费", "变现"],
+  },
+  {
+    label: "视觉参考",
+    keywords: ["摄影", "画面", "镜头", "美术", "设计", "配色", "视觉", "图片", "构图"],
+  },
+  {
+    label: "生活观察",
+    keywords: ["生活", "情绪", "成长", "职场", "关系", "城市", "日常", "旅行", "健康"],
+  },
+] as const;
+
+function inspirationScope(value: unknown) {
+  return value === "recent" || value === "bilibili" ? value : "all";
+}
+
+function inspirationFingerprint(item: InspirationItem) {
+  const url = item.url?.trim().toLowerCase().replace(/[?#].*$/, "");
+  if (url) return `url:${url}`;
+  const title = item.title
+    .toLowerCase()
+    .replace(/[\s\p{P}\p{S}]+/gu, "")
+    .slice(0, 80);
+  return title ? `title:${title}` : `id:${item.id}`;
+}
+
+function classifyInspiration(item: InspirationItem) {
+  const haystack = `${item.title} ${item.note ?? ""} ${item.url ?? ""} ${item.tags.join(" ")}`.toLowerCase();
+  const matches = inspirationThemes
+    .map((theme) => ({
+      label: theme.label,
+      score: theme.keywords.reduce((score, keyword) => score + (haystack.includes(keyword) ? 1 : 0), 0),
+    }))
+    .filter((theme) => theme.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 2)
+    .map((theme) => theme.label);
+  return matches.length > 0 ? matches : ["待归类"];
+}
+
+function organizeInspirations(data: Record<string, unknown> | undefined, user: User) {
+  const scope = inspirationScope(data?.scope);
+  const allItems = listDataItems<InspirationItem>("inspiration");
+  const recentCutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  const targets = allItems.filter((item) => {
+    if (scope === "bilibili") return isBilibiliInspiration(item);
+    if (scope === "recent") return +new Date(item.createdAt) >= recentCutoff;
+    return true;
+  });
+  const fingerprintCounts = new Map<string, number>();
+  for (const item of targets) {
+    const fingerprint = inspirationFingerprint(item);
+    fingerprintCounts.set(fingerprint, (fingerprintCounts.get(fingerprint) ?? 0) + 1);
+  }
+
+  const usedGroups = new Set<string>();
+  let updated = 0;
+  let duplicates = 0;
+  for (const item of targets) {
+    const tags = classifyInspiration(item);
+    tags.forEach((tag) => usedGroups.add(tag));
+    const duplicate = (fingerprintCounts.get(inspirationFingerprint(item)) ?? 0) > 1;
+    if (duplicate) {
+      tags.push("待合并");
+      duplicates += 1;
+    }
+    if (isBilibiliInspiration(item) && !tags.includes("B站")) tags.push("B站");
+    const nextTags = Array.from(new Set(tags)).slice(0, 4);
+    if (JSON.stringify(nextTags) === JSON.stringify(item.tags)) continue;
+    updateDataItem<InspirationItem>("inspiration", item.id, (existing) => ({
+      ...existing,
+      tags: nextTags,
+    }));
+    updated += 1;
+  }
+
+  if (targets.length > 0) {
+    recordActivity({
+      type: "update",
+      resource: "inspiration",
+      title: "灵感库",
+      summary: `${user.displayName} 使用 Agent 整理了 ${targets.length} 条灵感，更新 ${updated} 条`,
+      user,
+    });
+  }
+
+  return {
+    processed: targets.length,
+    updated,
+    groups: usedGroups.size,
+    duplicates,
+  };
+}
+
 function resultBlock(results: WorkspaceActionResult[]) {
   if (results.length === 0) return "";
   return [
@@ -380,7 +506,9 @@ export async function runWorkspaceAgent(input: {
 }): Promise<WorkspaceAgentCompletion> {
   const planned = await planWorkspaceActions(input);
   const actions = Array.isArray(planned.plan?.actions)
-    ? planned.plan.actions.slice(0, MAX_ACTIONS_PER_TURN)
+    ? planned.plan.actions
+        .filter((action): action is WorkspaceAgentAction => !!action && typeof action === "object")
+        .slice(0, MAX_ACTIONS_PER_TURN)
     : [];
   const projectRefs = new Map<string, string>();
   const results: WorkspaceActionResult[] = [];
@@ -396,6 +524,7 @@ export async function runWorkspaceAgent(input: {
     ...planned.completion,
     content: executed ? `${reply}\n\n${executed}` : reply,
     actions: results,
+    plannedActions: actions,
   };
 }
 

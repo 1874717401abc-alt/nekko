@@ -8,6 +8,7 @@ import {
   planWorkspaceActions,
   workspaceActionLabel,
   type WorkspaceAgentAction,
+  type WorkspaceActionResult,
 } from "@/lib/workspaceAgent";
 import type {
   AgentTaskRun,
@@ -405,4 +406,56 @@ export async function createAndRunAgentTask(input: {
     });
     return getAgentTaskRunDetail(run.id, input.user.id)!;
   }
+}
+
+export function recordWorkspaceAgentTask(input: {
+  prompt: string;
+  mode: AiMode;
+  user: User;
+  summary: string;
+  actions: WorkspaceAgentAction[];
+  results: WorkspaceActionResult[];
+}): AgentTaskRunDetail | null {
+  if (input.actions.length === 0) return null;
+
+  const run = insertRun({
+    userId: input.user.id,
+    title: titleFromPrompt(input.prompt),
+    prompt: input.prompt,
+    mode: input.mode,
+    status: "running",
+  });
+  insertSteps(run.id, input.actions);
+  const detail = getAgentTaskRunDetail(run.id, input.user.id);
+  if (!detail) return null;
+
+  detail.steps.forEach((step, index) => {
+    const result = input.results[index];
+    if (!result) {
+      updateStep({
+        id: step.id,
+        status: "failed",
+        error: "执行结果未返回。",
+      });
+      return;
+    }
+    updateStep({
+      id: step.id,
+      status: result.ok ? "completed" : result.requiresApproval ? "blocked" : "failed",
+      result: result.ok || result.requiresApproval ? result.detail : undefined,
+      error: !result.ok && !result.requiresApproval ? result.detail : undefined,
+      resource: result.resource,
+      resourceId: result.resourceId,
+    });
+  });
+
+  const completed = getAgentTaskRunDetail(run.id, input.user.id);
+  if (!completed) return null;
+  updateRun({
+    id: run.id,
+    userId: input.user.id,
+    status: statusFromSteps(completed.steps),
+    summary: input.summary,
+  });
+  return getAgentTaskRunDetail(run.id, input.user.id);
 }
