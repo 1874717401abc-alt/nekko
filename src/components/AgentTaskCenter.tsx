@@ -44,6 +44,7 @@ const statusClass: Record<AgentTaskStatus | AgentTaskStepStatus, string> = {
 const starters = [
   "帮我新建一个下周B站内容项目，并拆成5个任务。",
   "采集今天B站热门内容，生成6条灵感放进灵感库。",
+  "整理内容雷达生成的灵感标签，统一成 AI选题 和 B站热门。",
   "把资料库里最近的素材整理成一个拍摄项目和执行任务。",
 ];
 
@@ -92,6 +93,17 @@ export default function AgentTaskCenter({
   const [pending, setPending] = useState(false);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const canContinue =
+    !!activeRun &&
+    !pending &&
+    (activeRun.steps.length === 0 || activeRun.status === "failed" || activeRun.status === "running");
+  const continueLabel = !activeRun
+    ? "继续执行"
+    : activeRun.steps.length === 0
+      ? "重新规划执行"
+      : activeRun.status === "completed"
+        ? "已完成"
+        : "继续执行";
 
   function mergeRun(run: AgentTaskRunDetail) {
     setRuns((current) => {
@@ -269,10 +281,10 @@ export default function AgentTaskCenter({
               <button
                 type="button"
                 onClick={continueRun}
-                disabled={pending || activeRun.status === "completed"}
-                className="rounded-xl border border-line px-4 py-2.5 text-sm text-ink-soft transition-colors hover:border-accent/50 hover:text-ink disabled:opacity-45"
+                disabled={!canContinue}
+                className="rounded-xl border border-line bg-paper-soft px-4 py-2.5 text-sm text-ink-soft transition-colors hover:border-accent/50 hover:text-ink disabled:border-line/50 disabled:bg-paper/40 disabled:text-ink-soft/40"
               >
-                继续执行
+                {continueLabel}
               </button>
             </div>
 
@@ -314,7 +326,7 @@ export default function AgentTaskCenter({
               })}
               {activeRun.steps.length === 0 && (
                 <p className="rounded-xl border border-line bg-paper/60 p-4 text-sm text-ink-soft">
-                  这次任务没有生成可执行步骤，只保存了 agent 的判断。
+                  这次任务还没有可执行步骤，可以点“重新规划执行”让 agent 用最新动作白名单再拆一次。
                 </p>
               )}
             </div>

@@ -15,10 +15,16 @@ export async function POST(
   }
 
   const { id } = await params;
-  const run = await executeAgentTaskRun(id, user);
-  if (!run) {
-    return NextResponse.json({ error: "任务不存在。" }, { status: 404 });
-  }
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 180_000);
+  try {
+    const run = await executeAgentTaskRun(id, user, controller.signal);
+    if (!run) {
+      return NextResponse.json({ error: "任务不存在。" }, { status: 404 });
+    }
 
-  return NextResponse.json({ run });
+    return NextResponse.json({ run });
+  } finally {
+    clearTimeout(timeout);
+  }
 }

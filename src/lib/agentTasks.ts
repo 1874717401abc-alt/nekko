@@ -229,6 +229,40 @@ function updateStep(input: {
   );
 }
 
+async function planRunSteps(input: {
+  run: AgentTaskRun;
+  user: User;
+  signal: AbortSignal;
+}): Promise<AgentTaskRunDetail> {
+  const workspaceContext = await buildAiWorkspaceContext(input.user);
+  const planned = await planWorkspaceActions({
+    messages: [
+      {
+        role: "system",
+        content: buildAiSystemPrompt(input.run.mode, workspaceContext),
+      },
+      { role: "user", content: input.run.prompt },
+    ],
+    mode: input.run.mode,
+    signal: input.signal,
+    conversationId: input.run.id,
+    user: input.user,
+  });
+
+  const actions = Array.isArray(planned.plan?.actions)
+    ? planned.plan.actions.slice(0, MAX_TASK_STEPS)
+    : [];
+  insertSteps(input.run.id, actions);
+  updateRun({
+    id: input.run.id,
+    userId: input.user.id,
+    status: actions.length > 0 ? "running" : "completed",
+    summary: planned.plan?.reply || planned.completion.content || "没有生成可执行步骤。",
+  });
+
+  return getAgentTaskRunDetail(input.run.id, input.user.id)!;
+}
+
 export function listAgentTaskRuns(userId: string): AgentTaskRun[] {
   const db = getDb();
   const rows = db
@@ -255,9 +289,27 @@ export function getAgentTaskRunDetail(id: string, userId: string): AgentTaskRunD
   return { ...run, steps: rows.map(toStep) };
 }
 
-export async function executeAgentTaskRun(id: string, user: User): Promise<AgentTaskRunDetail | null> {
-  const detail = getAgentTaskRunDetail(id, user.id);
+export async function executeAgentTaskRun(
+  id: string,
+  user: User,
+  signal?: AbortSignal
+): Promise<AgentTaskRunDetail | null> {
+  let detail = getAgentTaskRunDetail(id, user.id);
   if (!detail) return null;
+
+  if (detail.steps.length === 0) {
+    const controller = signal ? null : new AbortController();
+    const timeout = controller ? setTimeout(() => controller.abort(), 180_000) : null;
+    try {
+      detail = await planRunSteps({
+        run: detail,
+        user,
+        signal: signal ?? controller!.signal,
+      });
+    } finally {
+      if (timeout) clearTimeout(timeout);
+    }
+  }
 
   updateRun({ id, userId: user.id, status: "running" });
   const projectRefs = new Map<string, string>();
@@ -312,32 +364,8 @@ export async function createAndRunAgentTask(input: {
   });
 
   try {
-    const workspaceContext = await buildAiWorkspaceContext(input.user);
-    const planned = await planWorkspaceActions({
-      messages: [
-        {
-          role: "system",
-          content: buildAiSystemPrompt(input.mode, workspaceContext),
-        },
-        { role: "user", content: input.prompt },
-      ],
-      mode: input.mode,
-      signal: input.signal,
-      conversationId: run.id,
-      user: input.user,
-    });
-
-    const actions = Array.isArray(planned.plan?.actions)
-      ? planned.plan.actions.slice(0, MAX_TASK_STEPS)
-      : [];
-    insertSteps(run.id, actions);
-    updateRun({
-      id: run.id,
-      userId: input.user.id,
-      status: actions.length > 0 ? "running" : "completed",
-      summary: planned.plan?.reply || planned.completion.content || "没有生成可执行步骤。",
-    });
-    const executed = await executeAgentTaskRun(run.id, input.user);
+    await planRunSteps({ run, user: input.user, signal: input.signal });
+    const executed = await executeAgentTaskRun(run.id, input.user, input.signal);
     return executed ?? getAgentTaskRunDetail(run.id, input.user.id)!;
   } catch (error) {
     updateRun({

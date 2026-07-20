@@ -45,7 +45,6 @@ type RadarIdea = {
   angle?: string;
   hook?: string;
   reason?: string;
-  tags?: string[];
 };
 
 export type ContentRadarResult = {
@@ -178,21 +177,11 @@ function fallbackIdeas(videos: BilibiliVideo[], limit: number): RadarIdea[] {
     angle: "从标题钩子、内容结构和评论互动中拆出可复用的短视频表达方式。",
     hook: `为什么「${video.title.slice(0, 18)}」会被转发？`,
     reason: "该视频在公开热门/排行榜中热度靠前，适合作为当日选题拆解样本。",
-    tags: ["爆款拆解", "B站趋势", video.tname].filter(Boolean),
   }));
 }
 
-function tagsFromIdea(idea: RadarIdea, video: BilibiliVideo) {
-  const tags = [
-    ...(Array.isArray(idea.tags) ? idea.tags : []),
-    "AI选题",
-    "B站趋势",
-    video.tname,
-  ]
-    .map((tag) => tag.replace(/^#/, "").trim())
-    .filter(Boolean);
-
-  return Array.from(new Set(tags)).slice(0, 6);
+function radarTags() {
+  return ["AI选题", "B站热门"];
 }
 
 function noteFromIdea(idea: RadarIdea, video: BilibiliVideo) {
@@ -218,7 +207,7 @@ async function generateIdeas(videos: BilibiliVideo[], limit: number) {
     "根据下面的 B站公开热门/排行榜视频信号，生成适合工作室灵感库的原创选题。",
     "要求：不要照搬标题，不要制造事实，不要输出营销套话；每条必须能让团队直接开始写脚本或做拆解。",
     `输出 ${limit} 条，只返回 JSON 数组，不要 Markdown，不要解释。`,
-    "字段：title（28字内）、sourceBvid、angle、hook、reason、tags（3-5个中文标签）。",
+    "字段：title（28字内）、sourceBvid、angle、hook、reason。不要输出 tags，系统会统一打固定标签。",
     "",
     JSON.stringify(sourceSnapshot(videos), null, 2),
   ].join("\n");
@@ -293,7 +282,7 @@ export async function runContentRadar(limit = 6): Promise<ContentRadarResult> {
       type: "link",
       url,
       note: noteFromIdea(idea, video),
-      tags: tagsFromIdea(idea, video),
+      tags: radarTags(),
       createdAt: now,
       createdBy: SYSTEM_AGENT.displayName,
       createdById: SYSTEM_AGENT.id,
