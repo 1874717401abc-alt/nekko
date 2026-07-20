@@ -39,7 +39,17 @@ echo "Restarting $PM2_APP"
 pm2 restart "$PM2_APP" --update-env
 
 echo "Checking health: $HEALTH_URL"
-curl -fsSI --max-time 15 "$HEALTH_URL" >/dev/null
+for attempt in $(seq 1 30); do
+  if curl -fsSI --max-time 5 "$HEALTH_URL" >/dev/null; then
+    echo "Health check passed on attempt $attempt."
+    pm2 list
+    echo "Deploy complete."
+    exit 0
+  fi
+  sleep 1
+done
 
 pm2 list
-echo "Deploy complete."
+pm2 logs "$PM2_APP" --lines 40 --nostream
+echo "Health check failed after 30 attempts."
+exit 1
