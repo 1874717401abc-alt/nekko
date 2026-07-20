@@ -196,3 +196,41 @@ export type AiConversationSummary = AiConversation & {
   lastMessage?: string;
   messageCount: number;
 };
+
+export type AgentTaskStatus = "planning" | "running" | "completed" | "failed";
+
+export type AgentTaskStepStatus = "pending" | "running" | "completed" | "failed";
+
+export type AgentTaskRun = {
+  id: string;
+  userId: string;
+  title: string;
+  prompt: string;
+  mode: AiMode;
+  status: AgentTaskStatus;
+  summary: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AgentTaskStep = {
+  id: string;
+  runId: string;
+  orderIndex: number;
+  action: string;
+  ref?: string;
+  title: string;
+  payload: Record<string, unknown>;
+  status: AgentTaskStepStatus;
+  result?: string;
+  resource?: string;
+  resourceId?: string;
+  error?: string;
+  requiresApproval: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AgentTaskRunDetail = AgentTaskRun & {
+  steps: AgentTaskStep[];
+};

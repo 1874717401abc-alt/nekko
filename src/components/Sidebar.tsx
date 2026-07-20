@@ -33,6 +33,18 @@ const navItems: { href: string; label: string; sub: string; icon: ReactNode }[] 
     ),
   },
   {
+    href: "/agent",
+    label: "执行中心",
+    sub: "Agent",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4">
+        <path d="M7 4h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" />
+        <path d="M8.5 9.2h7M8.5 13h4.8" strokeLinecap="round" />
+        <path d="m14 16.3 1.4 1.4 3-3.4" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  {
     href: "/search",
     label: "搜索",
     sub: "Search",

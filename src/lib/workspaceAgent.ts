@@ -9,26 +9,26 @@ import { createResourceItem } from "@/lib/resourceRules";
 import { insertDataItem, listDataItems, type ItemResourceName, type ResourceItem } from "@/lib/store";
 import type { AiMode, Project, User } from "@/lib/types";
 
-type AgentActionName =
+export type WorkspaceAgentActionName =
   | "create_project"
   | "create_task"
   | "create_inspiration"
   | "create_library"
   | "run_content_radar";
 
-type AgentAction = {
+export type WorkspaceAgentAction = {
   action?: string;
   ref?: string;
   data?: Record<string, unknown>;
 };
 
-type AgentPlan = {
+export type WorkspaceAgentPlan = {
   reply?: string;
-  actions?: AgentAction[];
+  actions?: WorkspaceAgentAction[];
 };
 
 export type WorkspaceActionResult = {
-  action: AgentActionName | "unknown";
+  action: WorkspaceAgentActionName | "unknown";
   ok: boolean;
   title: string;
   detail: string;
@@ -41,7 +41,7 @@ export type WorkspaceAgentCompletion = AgentCompletion & {
 };
 
 const MAX_ACTIONS_PER_TURN = 12;
-const ACTIONS = new Set<AgentActionName>([
+const ACTIONS = new Set<WorkspaceAgentActionName>([
   "create_project",
   "create_task",
   "create_inspiration",
@@ -49,8 +49,8 @@ const ACTIONS = new Set<AgentActionName>([
   "run_content_radar",
 ]);
 
-function isAgentActionName(value: unknown): value is AgentActionName {
-  return typeof value === "string" && ACTIONS.has(value as AgentActionName);
+function isAgentActionName(value: unknown): value is WorkspaceAgentActionName {
+  return typeof value === "string" && ACTIONS.has(value as WorkspaceAgentActionName);
 }
 
 function stripCodeFence(text: string) {
@@ -58,7 +58,7 @@ function stripCodeFence(text: string) {
   return fenced ?? text;
 }
 
-function extractPlan(text: string): AgentPlan | null {
+function extractPlan(text: string): WorkspaceAgentPlan | null {
   const raw = stripCodeFence(text).trim();
   const start = raw.indexOf("{");
   const end = raw.lastIndexOf("}");
@@ -66,7 +66,7 @@ function extractPlan(text: string): AgentPlan | null {
 
   try {
     const parsed = JSON.parse(raw.slice(start, end + 1));
-    return parsed && typeof parsed === "object" ? (parsed as AgentPlan) : null;
+    return parsed && typeof parsed === "object" ? (parsed as WorkspaceAgentPlan) : null;
   } catch {
     return null;
   }
@@ -80,18 +80,18 @@ function normalizeName(value: string) {
   return value.replace(/\s+/g, " ").trim().toLowerCase();
 }
 
-function actionLabel(action: AgentActionName) {
-  const labels: Record<AgentActionName, string> = {
+export function workspaceActionLabel(action: WorkspaceAgentActionName | string) {
+  const labels: Record<WorkspaceAgentActionName, string> = {
     create_project: "创建项目",
     create_task: "创建任务",
     create_inspiration: "创建灵感",
     create_library: "创建资料",
     run_content_radar: "运行内容雷达",
   };
-  return labels[action];
+  return isAgentActionName(action) ? labels[action] : "未知动作";
 }
 
-function resourceForAction(action: AgentActionName): ItemResourceName | null {
+function resourceForAction(action: WorkspaceAgentActionName): ItemResourceName | null {
   if (action === "create_project") return "projects";
   if (action === "create_task") return "progress";
   if (action === "create_inspiration") return "inspiration";
@@ -125,7 +125,7 @@ function resolveProjectId(
 }
 
 function normalizeActionData(
-  action: AgentActionName,
+  action: WorkspaceAgentActionName,
   data: Record<string, unknown>,
   projectRefs: Map<string, string>,
   projects: Project[]
@@ -156,8 +156,8 @@ function actionInstruction() {
   ].join("\n");
 }
 
-async function executeAction(input: {
-  action: AgentAction;
+export async function executeWorkspaceAction(input: {
+  action: WorkspaceAgentAction;
   user: User;
   projectRefs: Map<string, string>;
 }): Promise<WorkspaceActionResult> {
@@ -188,7 +188,7 @@ async function executeAction(input: {
     return {
       action: name,
       ok: false,
-      title: actionLabel(name),
+      title: workspaceActionLabel(name),
       detail: "这个动作暂不支持。",
     };
   }
@@ -201,7 +201,7 @@ async function executeAction(input: {
     return {
       action: name,
       ok: false,
-      title: actionLabel(name),
+      title: workspaceActionLabel(name),
       detail: result.error,
       resource,
     };
@@ -217,7 +217,7 @@ async function executeAction(input: {
     action: name,
     ok: true,
     title: titleFromItem(item),
-    detail: `已${actionLabel(name)}「${titleFromItem(item)}」`,
+    detail: `已${workspaceActionLabel(name)}「${titleFromItem(item)}」`,
     resource,
     resourceId: item.id,
   };
@@ -241,6 +241,34 @@ export async function runWorkspaceAgent(input: {
   conversationId: string;
   user: User;
 }): Promise<WorkspaceAgentCompletion> {
+  const planned = await planWorkspaceActions(input);
+  const actions = Array.isArray(planned.plan?.actions)
+    ? planned.plan.actions.slice(0, MAX_ACTIONS_PER_TURN)
+    : [];
+  const projectRefs = new Map<string, string>();
+  const results: WorkspaceActionResult[] = [];
+
+  for (const action of actions) {
+    if (!action || typeof action !== "object") continue;
+    results.push(await executeWorkspaceAction({ action, user: input.user, projectRefs }));
+  }
+
+  const reply = text(planned.plan?.reply) || "我已经处理好了。";
+  const executed = resultBlock(results);
+  return {
+    ...planned.completion,
+    content: executed ? `${reply}\n\n${executed}` : reply,
+    actions: results,
+  };
+}
+
+export async function planWorkspaceActions(input: {
+  messages: AgentMessage[];
+  mode: AiMode;
+  signal: AbortSignal;
+  conversationId: string;
+  user: User;
+}): Promise<{ completion: AgentCompletion; plan: WorkspaceAgentPlan | null }> {
   const [systemMessage, ...rest] = input.messages;
   const agentMessages: AgentMessage[] = [
     {
@@ -259,24 +287,5 @@ export async function runWorkspaceAgent(input: {
   });
 
   const plan = extractPlan(completion.content);
-  if (!plan) {
-    return { ...completion, actions: [] };
-  }
-
-  const actions = Array.isArray(plan.actions) ? plan.actions.slice(0, MAX_ACTIONS_PER_TURN) : [];
-  const projectRefs = new Map<string, string>();
-  const results: WorkspaceActionResult[] = [];
-
-  for (const action of actions) {
-    if (!action || typeof action !== "object") continue;
-    results.push(await executeAction({ action, user: input.user, projectRefs }));
-  }
-
-  const reply = text(plan.reply) || "我已经处理好了。";
-  const executed = resultBlock(results);
-  return {
-    ...completion,
-    content: executed ? `${reply}\n\n${executed}` : reply,
-    actions: results,
-  };
+  return { completion, plan };
 }

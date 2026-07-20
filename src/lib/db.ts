@@ -63,6 +63,46 @@ export function getDb(): Database.Database {
     CREATE INDEX IF NOT EXISTS idx_ai_messages_conversation_created
       ON ai_messages (conversation_id, created_at ASC)
   `);
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS agent_task_runs (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      prompt TEXT NOT NULL,
+      mode TEXT NOT NULL,
+      status TEXT NOT NULL,
+      summary TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )
+  `);
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS agent_task_steps (
+      id TEXT PRIMARY KEY,
+      run_id TEXT NOT NULL,
+      order_index INTEGER NOT NULL,
+      action TEXT NOT NULL,
+      ref TEXT NOT NULL DEFAULT '',
+      title TEXT NOT NULL,
+      payload TEXT NOT NULL DEFAULT '{}',
+      status TEXT NOT NULL,
+      result TEXT NOT NULL DEFAULT '',
+      resource TEXT NOT NULL DEFAULT '',
+      resource_id TEXT NOT NULL DEFAULT '',
+      error TEXT NOT NULL DEFAULT '',
+      requires_approval INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )
+  `);
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_agent_task_runs_user_updated
+      ON agent_task_runs (user_id, updated_at DESC)
+  `);
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_agent_task_steps_run_order
+      ON agent_task_steps (run_id, order_index ASC)
+  `);
 
   const userColumns = (db.prepare("PRAGMA table_info(users)").all() as { name: string }[]).map(
     (c) => c.name
