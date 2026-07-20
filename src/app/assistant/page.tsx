@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import AIAssistant from "@/components/AIAssistant";
 import PageHeader from "@/components/PageHeader";
+import { getAgentStatus } from "@/lib/aiAgent";
 import { getCurrentUser } from "@/lib/auth";
 import { listAiConversations, listAiMessages } from "@/lib/aiConversations";
 import { readData } from "@/lib/store";
@@ -9,12 +10,13 @@ import type { InspirationItem, LibraryItem, ProgressTask, Project } from "@/lib/
 export const dynamic = "force-dynamic";
 
 export default async function AssistantPage() {
-  const [currentUser, projects, tasks, inspiration, library] = await Promise.all([
+  const [currentUser, projects, tasks, inspiration, library, agentStatus] = await Promise.all([
     getCurrentUser(),
     readData<Project[]>("projects"),
     readData<ProgressTask[]>("progress"),
     readData<InspirationItem[]>("inspiration"),
     readData<LibraryItem[]>("library"),
+    getAgentStatus(),
   ]);
 
   if (!currentUser) {
@@ -44,6 +46,7 @@ export default async function AssistantPage() {
         initialConversations={conversations}
         initialConversation={initialConversation}
         initialMessages={initialMessages}
+        agentStatus={agentStatus}
         snapshot={[
           { label: "项目", value: String(projects.length) },
           { label: "进行中", value: String(doing) },

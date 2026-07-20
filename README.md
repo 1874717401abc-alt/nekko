@@ -17,9 +17,13 @@ npm run dev
 
 - `SESSION_SECRET`: 登录态签名密钥，生产环境必须是长随机字符串。
 - `TEAM_INVITE_CODE`: 成员注册邀请码。
-- `DEEPSEEK_API_KEY`: DeepSeek API Key，用于站内 AI 助手，必须只放在服务器环境变量或 `.env.local`。
+- `AI_BACKEND`: AI 助手后端，`deepseek` 为直连模型，`hermes` 为本机 Hermes Agent 网关。
+- `DEEPSEEK_API_KEY`: DeepSeek API Key，必须只放在服务器环境变量或 `.env.local`。
 - `DEEPSEEK_BASE_URL`: DeepSeek API 地址，默认 `https://api.deepseek.com`。
-- `DEEPSEEK_MODEL`: AI 助手使用的模型，默认 `deepseek-v4-flash`。
+- `DEEPSEEK_MODEL`: DeepSeek 直连兜底模型，默认 `deepseek-v4-flash`。
+- `HERMES_API_BASE_URL`: Hermes Agent API server 地址，线上默认 `http://127.0.0.1:8642/v1`。
+- `HERMES_API_KEY`: Hermes API server bearer token，只给服务端使用。
+- `HERMES_MODEL`: Hermes 对外暴露的 agent 模型名，默认 `hermes-agent`。
 
 ## 功能结构
 
@@ -42,7 +46,7 @@ npm run dev
 
 线上运行时，`data/nekko.db`、`data/uploads` 和 `public/uploads` 都是运行数据，不应直接提交到仓库。
 
-AI 助手通过服务端接口调用 DeepSeek，前端不会接触 API Key。对话、消息和附件提取文本会保存到 SQLite，方便按对话继续上下文。当前版本是只读助手，会基于工作台上下文、当前对话历史、上传文件和公开链接内容给建议，不会直接改任务、删资料或发布内容。
+AI 助手通过服务端接口调用模型或 Hermes Agent，前端不会接触 API Key。对话、消息和附件提取文本会保存到 SQLite，方便按对话继续上下文。`AI_BACKEND=hermes` 时，每个 Nekko 对话会带独立 Hermes session header，Hermes 网关离线时可自动降级到 DeepSeek 直连。当前版本是只读助手，会基于工作台上下文、当前对话历史、上传文件和公开链接内容给建议，不会直接改任务、删资料或发布内容。
 
 ## 部署
 

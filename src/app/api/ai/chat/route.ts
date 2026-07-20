@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
+import { AgentRequestError, requestAgentCompletion } from "@/lib/aiAgent";
 import {
   buildAiSystemPrompt,
   buildAiWorkspaceContext,
@@ -23,22 +24,6 @@ type ChatRole = "user" | "assistant";
 type ChatMessage = {
   role: ChatRole;
   content: string;
-};
-
-type DeepSeekResponse = {
-  choices?: Array<{
-    message?: {
-      content?: string | null;
-    };
-  }>;
-  usage?: {
-    prompt_tokens?: number;
-    completion_tokens?: number;
-    total_tokens?: number;
-  };
-  error?: {
-    message?: string;
-  };
 };
 
 const modes = new Set<AiMode>(["strategy", "content", "review", "deep"]);
@@ -162,11 +147,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "未登录" }, { status: 401 });
   }
 
-  const apiKey = process.env.DEEPSEEK_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json({ error: "AI 助手还没有配置 API Key。" }, { status: 503 });
-  }
-
   const body = await req.json().catch(() => null);
   const record = body as Record<string, unknown> | null;
   const legacyMessages = cleanLegacyMessages(record?.messages);
@@ -178,13 +158,8 @@ export async function POST(req: NextRequest) {
   }
 
   const mode = cleanMode((body as Record<string, unknown> | null)?.mode);
-  const baseUrl = (process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com").replace(
-    /\/$/,
-    ""
-  );
-  const model = process.env.DEEPSEEK_MODEL || "deepseek-v4-flash";
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 45_000);
+  const timeout = setTimeout(() => controller.abort(), 120_000);
 
   try {
     const existingConversationId =
@@ -224,55 +199,27 @@ export async function POST(req: NextRequest) {
     });
 
     const workspaceContext = await buildAiWorkspaceContext(user);
-    const deepSeekMessages = [
+    const modelMessages = [
       {
         role: "system" as const,
         content: buildAiSystemPrompt(mode, workspaceContext, memory),
       },
       ...recentMessages.map(messageForModel),
     ];
-    const requestBody: Record<string, unknown> = {
-      model,
-      messages: deepSeekMessages,
-      thinking: { type: mode === "deep" ? "enabled" : "disabled" },
-      max_tokens: mode === "deep" ? 1800 : 1200,
-      stream: false,
-    };
-    if (mode === "deep") {
-      requestBody.reasoning_effort = "high";
-    } else {
-      requestBody.temperature = mode === "content" ? 0.8 : 0.55;
-    }
 
-    const response = await fetch(`${baseUrl}/chat/completions`, {
-      method: "POST",
+    const completion = await requestAgentCompletion({
+      messages: modelMessages,
+      mode,
       signal: controller.signal,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify(requestBody),
+      conversationId: conversation.id,
+      userId: user.id,
     });
-
-    const data = (await response.json().catch(() => null)) as DeepSeekResponse | null;
-    if (!response.ok) {
-      const detail = data?.error?.message ? `：${data.error.message}` : "";
-      return NextResponse.json(
-        { error: `DeepSeek 请求失败（${response.status}）${detail}` },
-        { status: 502 }
-      );
-    }
-
-    const content = data?.choices?.[0]?.message?.content?.trim();
-    if (!content) {
-      return NextResponse.json({ error: "DeepSeek 没有返回有效内容。" }, { status: 502 });
-    }
 
     const assistantMessage = appendAiMessage({
       conversationId: conversation.id,
       userId: user.id,
       role: "assistant",
-      content,
+      content: completion.content,
     });
     const messages = listAiMessages(conversation.id, user.id);
     const updatedConversation = updateAiConversation({
@@ -287,10 +234,15 @@ export async function POST(req: NextRequest) {
       userMessage,
       message: assistantMessage,
       messages,
-      usage: data?.usage,
-      model,
+      usage: completion.usage,
+      model: completion.model,
+      backend: completion.backend,
+      fallbackFrom: completion.fallbackFrom,
     });
   } catch (error) {
+    if (error instanceof AgentRequestError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     const message =
       error instanceof Error && error.name === "AbortError"
         ? "AI 响应超时，请稍后重试。"

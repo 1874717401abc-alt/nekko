@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
+import type { AgentStatus } from "@/lib/aiAgent";
 import type {
   AiAttachment,
   AiConversation,
@@ -65,11 +66,13 @@ export default function AIAssistant({
   initialConversations,
   initialConversation,
   initialMessages,
+  agentStatus,
 }: {
   snapshot: SnapshotItem[];
   initialConversations: AiConversationSummary[];
   initialConversation: AiConversation | null;
   initialMessages: AiMessage[];
+  agentStatus: AgentStatus;
 }) {
   const [conversations, setConversations] =
     useState<AiConversationSummary[]>(initialConversations);
@@ -86,6 +89,7 @@ export default function AIAssistant({
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canSend = (input.trim().length > 0 || attachments.length > 0) && !pending && !uploading;
+  const agentStatusLabel = agentStatus.healthy ? "在线" : agentStatus.configured ? "降级" : "未配置";
 
   const visibleStarters = useMemo(() => starterPrompts.slice(0, 4), []);
 
@@ -300,6 +304,42 @@ export default function AIAssistant({
               <p className="text-sm text-ink-soft">还没有保存的 AI 对话。</p>
             )}
             {loading && <p className="text-sm text-ink-soft">正在加载对话...</p>}
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-line/70 bg-card p-5">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <p className="text-[11px] uppercase tracking-[0.24em] text-accent">Agent</p>
+            <span
+              className={`rounded-full border px-2.5 py-1 text-[11px] ${
+                agentStatus.healthy
+                  ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-200"
+                  : "border-amber-300/40 bg-amber-300/10 text-amber-100"
+              }`}
+            >
+              {agentStatusLabel}
+            </span>
+          </div>
+          <div className="flex flex-col gap-3">
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-xs text-ink-soft">内核</span>
+              <span className="text-sm font-medium text-ink">{agentStatus.label}</span>
+            </div>
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-xs text-ink-soft">模型</span>
+              <span className="max-w-[180px] truncate text-sm text-ink">{agentStatus.model}</span>
+            </div>
+            <p className="text-xs text-ink-soft">{agentStatus.detail}</p>
+            <div className="flex flex-wrap gap-2">
+              {agentStatus.capabilities.map((item) => (
+                <span
+                  key={item}
+                  className="rounded-full border border-line bg-paper-soft px-2.5 py-1 text-[11px] text-ink-soft"
+                >
+                  {item}
+                </span>
+              ))}
+            </div>
           </div>
         </section>
 
