@@ -24,6 +24,7 @@ const runStatusLabel: Record<AgentTaskStatus, string> = {
   running: "执行中",
   completed: "已完成",
   failed: "需处理",
+  blocked: "待接入",
 };
 
 const stepStatusLabel: Record<AgentTaskStepStatus, string> = {
@@ -31,6 +32,7 @@ const stepStatusLabel: Record<AgentTaskStepStatus, string> = {
   running: "执行中",
   completed: "已完成",
   failed: "失败",
+  blocked: "待接入",
 };
 
 const statusClass: Record<AgentTaskStatus | AgentTaskStepStatus, string> = {
@@ -38,6 +40,7 @@ const statusClass: Record<AgentTaskStatus | AgentTaskStepStatus, string> = {
   running: "border-amber-300/40 bg-amber-300/10 text-amber-100",
   completed: "border-emerald-400/40 bg-emerald-400/10 text-emerald-200",
   failed: "border-red-300/40 bg-red-300/10 text-red-100",
+  blocked: "border-violet-300/40 bg-violet-300/10 text-violet-100",
   pending: "border-line bg-paper-soft text-ink-soft",
 };
 
@@ -45,7 +48,7 @@ const starters = [
   "帮我新建一个下周B站内容项目，并拆成5个任务。",
   "采集今天B站热门内容，生成6条灵感放进灵感库。",
   "整理内容雷达生成的灵感标签，统一成 AI选题 和 B站热门。",
-  "把资料库里最近的素材整理成一个拍摄项目和执行任务。",
+  "判断我们下周账号增长要做什么，能执行的先执行，外部平台动作也列出来。",
 ];
 
 function formatTime(iso: string) {
@@ -79,6 +82,20 @@ function resourceHref(step: AgentTaskStep) {
   return "";
 }
 
+function hasExecutableStep(run: AgentTaskRunDetail) {
+  return run.steps.some(
+    (step) => !step.requiresApproval && step.status !== "completed" && step.status !== "blocked"
+  );
+}
+
+function stepDetail(step: AgentTaskStep) {
+  if (step.result || step.error) return step.result || step.error;
+  if (step.status === "blocked") {
+    return "Agent 已经把这个动作规划进任务流；当前还没有接入对应工具或账号授权，等待接入后执行。";
+  }
+  return payloadPreview(step.payload);
+}
+
 export default function AgentTaskCenter({
   initialRuns,
   initialRun,
@@ -93,17 +110,17 @@ export default function AgentTaskCenter({
   const [pending, setPending] = useState(false);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const canContinue =
-    !!activeRun &&
-    !pending &&
-    (activeRun.steps.length === 0 || activeRun.status === "failed" || activeRun.status === "running");
+  const activeRunHasExecutableStep = activeRun ? hasExecutableStep(activeRun) : false;
+  const canContinue = !!activeRun && !pending && (activeRun.steps.length === 0 || activeRunHasExecutableStep);
   const continueLabel = !activeRun
     ? "继续执行"
     : activeRun.steps.length === 0
       ? "重新规划执行"
       : activeRun.status === "completed"
         ? "已完成"
-        : "继续执行";
+        : activeRun.status === "blocked" && !activeRunHasExecutableStep
+          ? "等待接入"
+          : "继续执行";
 
   function mergeRun(run: AgentTaskRunDetail) {
     setRuns((current) => {
@@ -186,7 +203,7 @@ export default function AgentTaskCenter({
             value={prompt}
             onChange={(event) => setPrompt(event.target.value)}
             rows={5}
-            placeholder="告诉 agent 要完成什么，它会拆步骤并执行站内动作..."
+            placeholder="告诉 agent 要完成什么，它会自主拆步骤；能执行的会直接跑，未接平台会进入待接入..."
             className="w-full resize-none rounded-xl border border-line bg-paper px-4 py-3 text-sm leading-relaxed text-ink outline-none transition-colors focus:border-accent"
           />
           <div className="mt-3 grid grid-cols-4 gap-2">
@@ -311,7 +328,7 @@ export default function AgentTaskCenter({
                       </span>
                     </div>
                     <p className="mt-3 text-sm leading-relaxed text-ink-soft">
-                      {step.result || step.error || payloadPreview(step.payload)}
+                      {stepDetail(step)}
                     </p>
                     {href && (
                       <Link
@@ -326,7 +343,7 @@ export default function AgentTaskCenter({
               })}
               {activeRun.steps.length === 0 && (
                 <p className="rounded-xl border border-line bg-paper/60 p-4 text-sm text-ink-soft">
-                  这次任务还没有可执行步骤，可以点“重新规划执行”让 agent 用最新动作白名单再拆一次。
+                  这次任务还没有生成步骤，可以点“重新规划执行”让 agent 用最新工具能力再拆一次。
                 </p>
               )}
             </div>
@@ -335,7 +352,7 @@ export default function AgentTaskCenter({
           <div className="flex min-h-[620px] flex-col justify-center">
             <p className="font-serif-display text-3xl text-ink">把一句话变成执行流。</p>
             <p className="mt-3 max-w-xl text-sm leading-relaxed text-ink-soft">
-              创建项目、拆任务、记录灵感、整理资料和触发内容雷达都会在这里留下步骤记录。
+              Agent 会先自主判断完整路径；已接入的站内动作会自动执行，外部平台、账号和高风险动作会保留为待接入步骤。
             </p>
           </div>
         )}

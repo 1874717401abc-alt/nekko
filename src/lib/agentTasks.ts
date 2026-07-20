@@ -2,7 +2,9 @@ import { randomUUID } from "crypto";
 import { getDb } from "@/lib/db";
 import { buildAiSystemPrompt, buildAiWorkspaceContext } from "@/lib/aiWorkspace";
 import {
+  describeBlockedWorkspaceAction,
   executeWorkspaceAction,
+  isConnectedWorkspaceAction,
   planWorkspaceActions,
   workspaceActionLabel,
   type WorkspaceAgentAction,
@@ -115,6 +117,28 @@ function safePayload(action: WorkspaceAgentAction) {
   return action.data && typeof action.data === "object" ? action.data : {};
 }
 
+function requiresConnectionOrApproval(action: WorkspaceAgentAction) {
+  return !action.action || !isConnectedWorkspaceAction(action.action);
+}
+
+function plannedStatus(actions: WorkspaceAgentAction[]): AgentTaskStatus {
+  if (actions.length === 0) return "completed";
+  return actions.some((action) => !requiresConnectionOrApproval(action)) ? "running" : "blocked";
+}
+
+function statusFromSteps(steps: AgentTaskStep[]): AgentTaskStatus {
+  if (steps.some((step) => step.status === "failed")) return "failed";
+  if (steps.some((step) => step.status === "pending" || step.status === "running")) {
+    return "running";
+  }
+  if (steps.some((step) => step.status === "blocked" || step.requiresApproval)) return "blocked";
+  return "completed";
+}
+
+function canExecuteStep(step: AgentTaskStep) {
+  return !step.requiresApproval && step.status !== "completed" && step.status !== "blocked";
+}
+
 function insertRun(input: {
   userId: string;
   title: string;
@@ -182,11 +206,11 @@ function insertSteps(runId: string, actions: WorkspaceAgentAction[]) {
   const insert = db.prepare(
     `INSERT INTO agent_task_steps
       (id, run_id, order_index, action, ref, title, payload, status, result, resource, resource_id, error, requires_approval, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, '', '', '', '', ?, ?, ?)`
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, '', '', '', ?, ?, ?)`
   );
   const tx = db.transaction(() => {
     actions.slice(0, MAX_TASK_STEPS).forEach((action, index) => {
-      const requiresApproval = !action.action || workspaceActionLabel(action.action) === "未知动作";
+      const requiresApproval = requiresConnectionOrApproval(action);
       insert.run(
         `agent-step-${randomUUID()}`,
         runId,
@@ -195,7 +219,8 @@ function insertSteps(runId: string, actions: WorkspaceAgentAction[]) {
         action.ref ?? "",
         stepTitle(action),
         JSON.stringify(safePayload(action)),
-        requiresApproval ? "failed" : "pending",
+        requiresApproval ? "blocked" : "pending",
+        requiresApproval ? describeBlockedWorkspaceAction(action) : "",
         requiresApproval ? 1 : 0,
         now,
         now
@@ -256,7 +281,7 @@ async function planRunSteps(input: {
   updateRun({
     id: input.run.id,
     userId: input.user.id,
-    status: actions.length > 0 ? "running" : "completed",
+    status: plannedStatus(actions),
     summary: planned.plan?.reply || planned.completion.content || "没有生成可执行步骤。",
   });
 
@@ -311,6 +336,12 @@ export async function executeAgentTaskRun(
     }
   }
 
+  const executableSteps = detail.steps.filter(canExecuteStep);
+  if (executableSteps.length === 0) {
+    updateRun({ id, userId: user.id, status: statusFromSteps(detail.steps) });
+    return getAgentTaskRunDetail(id, user.id);
+  }
+
   updateRun({ id, userId: user.id, status: "running" });
   const projectRefs = new Map<string, string>();
   for (const step of detail.steps) {
@@ -320,7 +351,7 @@ export async function executeAgentTaskRun(
   }
 
   for (const step of detail.steps) {
-    if (step.status === "completed" || step.requiresApproval) continue;
+    if (!canExecuteStep(step)) continue;
     updateStep({ id: step.id, status: "running" });
     const result = await executeWorkspaceAction({
       action: { action: step.action, ref: step.ref, data: step.payload },
@@ -339,12 +370,10 @@ export async function executeAgentTaskRun(
 
   const next = getAgentTaskRunDetail(id, user.id);
   if (!next) return null;
-  const hasFailed = next.steps.some((step) => step.status === "failed");
-  const hasPending = next.steps.some((step) => step.status === "pending" || step.status === "running");
   updateRun({
     id,
     userId: user.id,
-    status: hasFailed ? "failed" : hasPending ? "running" : "completed",
+    status: statusFromSteps(next.steps),
   });
   return getAgentTaskRunDetail(id, user.id);
 }

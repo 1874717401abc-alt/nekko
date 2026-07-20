@@ -20,7 +20,7 @@ export default async function AgentPage() {
       <PageHeader
         eyebrow="Agent Runner"
         title="任务执行中心"
-        description="把一句目标拆成可追踪的执行步骤，让 Agent 在工作台里真正办事。"
+        description="让 Agent 先自主判断完整路径，能执行的立即执行，未接入的平台动作先沉淀成待接入步骤。"
       />
       <AgentTaskCenter initialRuns={runs} initialRun={initialRun} />
     </div>

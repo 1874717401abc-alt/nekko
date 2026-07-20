@@ -39,6 +39,7 @@ export type WorkspaceActionResult = {
   ok: boolean;
   title: string;
   detail: string;
+  requiresApproval?: boolean;
   resource?: ItemResourceName;
   resourceId?: string;
 };
@@ -59,6 +60,10 @@ const ACTIONS = new Set<WorkspaceAgentActionName>([
 
 function isAgentActionName(value: unknown): value is WorkspaceAgentActionName {
   return typeof value === "string" && ACTIONS.has(value as WorkspaceAgentActionName);
+}
+
+export function isConnectedWorkspaceAction(value: unknown): value is WorkspaceAgentActionName {
+  return isAgentActionName(value);
 }
 
 function stripCodeFence(text: string) {
@@ -97,7 +102,26 @@ export function workspaceActionLabel(action: WorkspaceAgentActionName | string) 
     run_content_radar: "运行内容雷达",
     normalize_inspiration_tags: "整理灵感标签",
   };
-  return isAgentActionName(action) ? labels[action] : "未知动作";
+  const openActionLabels: Record<string, string> = {
+    external_publish: "外部平台发布",
+    publish_bilibili: "发布到 B站",
+    publish_xiaohongshu: "发布到小红书",
+    publish_douyin: "发布到抖音",
+    external_login: "外部账号登录",
+    connect_platform: "接入平台工具",
+    browser_research: "浏览器调研",
+    web_research: "网页调研",
+    bilibili_research: "B站深度采集",
+    private_scrape: "非公开内容采集",
+    delete_workspace_data: "删除工作台数据",
+    send_notification: "发送通知",
+    schedule_recurring_job: "创建自动化任务",
+    install_agent_tool: "安装 Agent 工具",
+  };
+  if (isAgentActionName(action)) return labels[action];
+  if (openActionLabels[action]) return openActionLabels[action];
+  const normalized = action.replace(/[_-]+/g, " ").trim();
+  return normalized || "待接入动作";
 }
 
 function resourceForAction(action: WorkspaceAgentActionName): ItemResourceName | null {
@@ -150,9 +174,10 @@ function normalizeActionData(
 
 function actionInstruction() {
   return [
-    "你现在是 Nekko Workspace Agent，有权在站内执行有限白名单动作。",
-    "你必须判断用户是否明确要求你办事。只有明确要求创建、安排、记录、采集、放进库、拆任务时才执行动作；普通咨询只回复，不执行。",
-    "只允许这些动作：",
+    "你现在是 Nekko Workspace Agent。你的第一职责是自主判断目标、拆解步骤、决定该用哪些工具。",
+    "你必须判断用户是否明确要求你办事。只有明确要求创建、安排、记录、采集、放进库、拆任务、操作平台时才输出 actions；普通咨询只回复，不执行。",
+    "不要把当前工具接入情况理解成思考边界。你可以在 actions 中写出你判断需要的完整步骤；已接入动作会自动执行，未接入/高风险/外部动作会被保存为待接入或待授权步骤。",
+    "已接入并可自动执行的站内动作：",
     "- create_project: data = { name, description?, tags? }",
     "- create_task: data = { title, description?, assignee?, status?, priority?, dueDate?, projectId?, projectName?, projectRef? }",
     "- create_inspiration: data = { title, type?, url?, note?, tags?, projectId?, projectName?, projectRef? }",
@@ -160,12 +185,37 @@ function actionInstruction() {
     "- run_content_radar: data = { limit? }，用于用户要求采集/扒 B站/生成今日趋势灵感。",
     "- normalize_inspiration_tags: data = { scope?, tags? }，用于用户要求整理灵感标签、清理内容雷达标签、B站趋势标签太多。scope 可为 ai_radar、bilibili、all；默认 ai_radar。tags 默认 [\"AI选题\", \"B站热门\"]。",
     "如果用户说“内容雷达/B站趋势/每天扒的灵感标签太多、不要每条造标签、统一标签、整理标签”，必须生成 normalize_inspiration_tags 动作。",
+    "未接入、外部平台或高风险动作也要照常规划，不要省略；action 使用清晰的 snake_case 名称，例如 publish_bilibili、publish_xiaohongshu、external_login、browser_research、send_notification、schedule_recurring_job、install_agent_tool。",
+    "这类待接入/待授权动作的 data 要说明 { title?, reason?, requires?, tool?, risk?, next? }，并且不要声称已经完成。",
+    "涉及删除、永久删除、改密码、绕过登录、外部账号登录、对外发布、私信/通知、付费、权限变更、抓取非公开内容时，必须规划成待接入/待授权步骤，说明为什么需要这个动作和下一步需要接什么工具。",
     "如果一个动作后续要被引用，用 ref，例如先 create_project ref='p1'，后面的 create_task data.projectRef='p1'。",
-    "本段白名单动作覆盖前面只读限制；仅在这些动作内可以修改工作台数据。",
-    "禁止删除、永久删除、改密码、绕过登录、发布到外部平台、抓取非公开内容、调用未列出的动作。",
+    "本段站内动作覆盖前面只读限制；已接入站内动作可以修改工作台数据。未接入/外部/高风险动作只保存计划，不假装完成。",
     "输出必须是 JSON 对象，不要 Markdown，不要解释 JSON 之外的内容。",
     "格式：{ \"reply\": \"给用户的简短说明\", \"actions\": [{ \"action\": \"create_project\", \"ref\": \"p1\", \"data\": {...} }] }",
   ].join("\n");
+}
+
+function dataText(data: Record<string, unknown> | undefined, key: string) {
+  const value = data?.[key];
+  return typeof value === "string" ? value.trim() : "";
+}
+
+export function describeBlockedWorkspaceAction(action: WorkspaceAgentAction) {
+  const label = workspaceActionLabel(action.action ?? "");
+  const reason = dataText(action.data, "reason");
+  const requires = dataText(action.data, "requires");
+  const tool = dataText(action.data, "tool");
+  const risk = dataText(action.data, "risk");
+  const next = dataText(action.data, "next");
+  const context = [
+    reason ? `判断：${reason}` : "",
+    requires ? `需要：${requires}` : "",
+    tool ? `工具：${tool}` : "",
+    risk ? `风险：${risk}` : "",
+    next ? `下一步：${next}` : "",
+  ].filter(Boolean);
+
+  return `Agent 已规划「${label}」，当前还没有接入对应工具或账号授权，先保留为待接入/待授权步骤。${context.join("；")}`;
 }
 
 export async function executeWorkspaceAction(input: {
@@ -175,11 +225,13 @@ export async function executeWorkspaceAction(input: {
 }): Promise<WorkspaceActionResult> {
   const name = input.action.action;
   if (!isAgentActionName(name)) {
+    const title = workspaceActionLabel(typeof name === "string" ? name : "");
     return {
       action: "unknown",
       ok: false,
-      title: "未知动作",
-      detail: "模型给出了不在白名单里的动作，已拒绝执行。",
+      title,
+      detail: describeBlockedWorkspaceAction(input.action),
+      requiresApproval: true,
     };
   }
 
@@ -311,9 +363,9 @@ function normalizeInspirationTags(data?: Record<string, unknown>) {
 function resultBlock(results: WorkspaceActionResult[]) {
   if (results.length === 0) return "";
   return [
-    "已执行：",
+    "执行记录：",
     ...results.map((result) => {
-      const marker = result.ok ? "✓" : "!";
+      const marker = result.ok ? "✓" : result.requiresApproval ? "·" : "!";
       return `- ${marker} ${result.detail}`;
     }),
   ].join("\n");

@@ -197,9 +197,9 @@ export type AiConversationSummary = AiConversation & {
   messageCount: number;
 };
 
-export type AgentTaskStatus = "planning" | "running" | "completed" | "failed";
+export type AgentTaskStatus = "planning" | "running" | "completed" | "failed" | "blocked";
 
-export type AgentTaskStepStatus = "pending" | "running" | "completed" | "failed";
+export type AgentTaskStepStatus = "pending" | "running" | "completed" | "failed" | "blocked";
 
 export type AgentTaskRun = {
   id: string;
