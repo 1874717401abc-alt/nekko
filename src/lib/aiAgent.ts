@@ -163,6 +163,51 @@ async function requestDeepSeekCompletion(input: {
   };
 }
 
+export async function requestAgentPlanningCompletion(input: {
+  messages: AgentMessage[];
+  signal: AbortSignal;
+}): Promise<AgentCompletion> {
+  const config = deepSeekConfig();
+  if (!config.apiKey) {
+    throw new AgentRequestError("站内动作规划器还没有配置 DeepSeek API Key。", 503);
+  }
+
+  const response = await fetch(`${config.baseUrl}/chat/completions`, {
+    method: "POST",
+    signal: input.signal,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${config.apiKey}`,
+    },
+    body: JSON.stringify({
+      model: config.model,
+      messages: input.messages,
+      max_tokens: 1800,
+      temperature: 0.1,
+      response_format: { type: "json_object" },
+      stream: false,
+    }),
+  });
+
+  const data = (await response.json().catch(() => null)) as ChatCompletionResponse | null;
+  if (!response.ok) {
+    const detail = data?.error?.message ? `：${data.error.message}` : "";
+    throw new AgentRequestError(`站内动作规划失败（${response.status}）${detail}`);
+  }
+
+  const content = data?.choices?.[0]?.message?.content?.trim();
+  if (!content) {
+    throw new AgentRequestError("站内动作规划器没有返回有效内容。");
+  }
+
+  return {
+    content,
+    usage: data?.usage,
+    model: data?.model || config.model,
+    backend: "deepseek",
+  };
+}
+
 async function requestHermesCompletion(input: {
   messages: AgentMessage[];
   mode: AiMode;
@@ -224,7 +269,19 @@ export async function requestAgentCompletion(input: {
       return await requestHermesCompletion(input);
     } catch (error) {
       if (!deepSeekConfig().apiKey) throw error;
-      const fallback = await requestDeepSeekCompletion(input);
+      const fallbackMessages = input.messages.map((message, index) =>
+        index === 0 && message.role === "system"
+          ? {
+              ...message,
+              content: `${message.content}\n\n当前请求已降级到无工具模型。不要声称已经联网、浏览网页、读取服务器文件或执行外部操作；需要实时信息时明确说明本轮无法核实。`,
+            }
+          : message
+      );
+      const fallback = await requestDeepSeekCompletion({
+        messages: fallbackMessages,
+        mode: input.mode,
+        signal: input.signal,
+      });
       return { ...fallback, fallbackFrom: "hermes" };
     }
   }

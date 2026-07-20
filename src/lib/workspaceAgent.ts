@@ -3,6 +3,7 @@ import {
   type AgentMessage,
   type AgentCompletion,
   requestAgentCompletion,
+  requestAgentPlanningCompletion,
 } from "@/lib/aiAgent";
 import { runContentRadar } from "@/lib/contentRadar";
 import { createResourceItem } from "@/lib/resourceRules";
@@ -178,9 +179,9 @@ function normalizeActionData(
 
 function actionInstruction() {
   return [
-    "你现在是 Nekko Workspace Agent。你的第一职责是自主判断目标、拆解步骤、决定该用哪些工具。",
-    "你必须判断用户是否明确要求你办事。只有明确要求创建、安排、记录、采集、放进库、拆任务、操作平台时才输出 actions；普通咨询只回复，不执行。",
-    "不要把当前工具接入情况理解成思考边界。你可以在 actions 中写出你判断需要的完整步骤；已接入动作会自动执行，未接入/高风险/外部动作会被保存为待接入或待授权步骤。",
+    "你现在是 Nekko 的站内动作规划器，不负责回答用户，也不要调用工具。",
+    "判断用户是否明确要求修改工作台数据或执行外部高风险动作。只有明确要求创建、安排、记录、采集入库、拆任务、发布、登录、通知或自动化时才输出 actions；普通咨询和已经由主 Agent 完成的调研不要重复规划。",
+    "已接入动作会自动执行，未接入、高风险或需要外部账号的动作会保存为待接入/待授权步骤。",
     "已接入并可自动执行的站内动作：",
     "- create_project: data = { name, description?, tags? }",
     "- create_task: data = { title, description?, assignee?, status?, priority?, dueDate?, projectId?, projectName?, projectRef? }",
@@ -191,7 +192,7 @@ function actionInstruction() {
     "- organize_inspirations: data = { scope? }，用于用户要求整理、归类、清理整个灵感库。scope 可为 all、recent、bilibili；默认 all。它会统一主题标签并标记疑似重复，但不会删除原内容。",
     "如果用户说“内容雷达/B站趋势/每天扒的灵感标签太多、不要每条造标签、统一标签、整理标签”，必须生成 normalize_inspiration_tags 动作。",
     "如果用户说“整理灵感、归类灵感、清理灵感库、帮我收拾灵感”，必须生成 organize_inspirations 动作；除非用户明确只要求整理内容雷达标签。",
-    "未接入、外部平台或高风险动作也要照常规划，不要省略；action 使用清晰的 snake_case 名称，例如 publish_bilibili、publish_xiaohongshu、external_login、browser_research、send_notification、schedule_recurring_job、install_agent_tool。",
+    "未接入、外部平台或高风险动作也要照常规划，不要省略；action 使用清晰的 snake_case 名称，例如 publish_bilibili、publish_xiaohongshu、external_login、send_notification、schedule_recurring_job、install_agent_tool。",
     "这类待接入/待授权动作的 data 要说明 { title?, reason?, requires?, tool?, risk?, next? }，并且不要声称已经完成。",
     "涉及删除、永久删除、改密码、绕过登录、外部账号登录、对外发布、私信/通知、付费、权限变更、抓取非公开内容时，必须规划成待接入/待授权步骤，说明为什么需要这个动作和下一步需要接什么工具。",
     "如果一个动作后续要被引用，用 ref，例如先 create_project ref='p1'，后面的 create_task data.projectRef='p1'。",
@@ -199,6 +200,21 @@ function actionInstruction() {
     "输出必须是 JSON 对象，不要 Markdown，不要解释 JSON 之外的内容。",
     "格式：{ \"reply\": \"给用户的简短说明\", \"actions\": [{ \"action\": \"create_project\", \"ref\": \"p1\", \"data\": {...} }] }",
   ].join("\n");
+}
+
+export function shouldPlanWorkspaceActions(message: string) {
+  const normalized = message.replace(/\s+/g, " ").trim();
+  if (!normalized) return false;
+
+  const patterns = [
+    /(?:新建|创建|建立|添加|记录|保存|存入|放进|加入).{0,24}(?:项目|任务|灵感|资料|工作台|灵感库|资料库)/i,
+    /(?:项目|任务|灵感|资料|工作台|灵感库|资料库).{0,24}(?:新建|创建|添加|记录|保存|整理|归类|清理|统一|拆分|安排)/i,
+    /(?:整理|归类|清理|统一).{0,16}(?:灵感|标签|灵感库)/i,
+    /(?:采集|抓取|扒|生成).{0,18}(?:B站|b站|哔哩|热门|趋势|今日).{0,20}(?:选题|灵感)/i,
+    /(?:内容雷达|拆成.{0,10}任务|拆解成.{0,10}任务)/i,
+    /(?:发布|上传|登录|通知|私信|定时|自动执行|每天自动|每日自动|安装.{0,8}工具|接入.{0,8}平台)/i,
+  ];
+  return patterns.some((pattern) => pattern.test(normalized));
 }
 
 function dataText(data: Record<string, unknown> | undefined, key: string) {
@@ -504,7 +520,40 @@ export async function runWorkspaceAgent(input: {
   conversationId: string;
   user: User;
 }): Promise<WorkspaceAgentCompletion> {
-  const planned = await planWorkspaceActions(input);
+  const completion = await requestAgentCompletion({
+    messages: input.messages,
+    mode: input.mode,
+    signal: input.signal,
+    conversationId: input.conversationId,
+    userId: input.user.id,
+  });
+  const latestUserMessage = [...input.messages]
+    .reverse()
+    .find((message) => message.role === "user")?.content ?? "";
+
+  if (!shouldPlanWorkspaceActions(latestUserMessage)) {
+    return {
+      ...completion,
+      actions: [],
+      plannedActions: [],
+    };
+  }
+
+  let planned: Awaited<ReturnType<typeof planWorkspaceActions>>;
+  try {
+    planned = await planWorkspaceActions({
+      ...input,
+      assistantContext: completion.content,
+    });
+  } catch (error) {
+    console.error("[workspace-agent] action planning failed", error);
+    return {
+      ...completion,
+      content: `${completion.content}\n\n站内动作规划未完成，工作台数据没有被修改。`,
+      actions: [],
+      plannedActions: [],
+    };
+  }
   const actions = Array.isArray(planned.plan?.actions)
     ? planned.plan.actions
         .filter((action): action is WorkspaceAgentAction => !!action && typeof action === "object")
@@ -515,14 +564,22 @@ export async function runWorkspaceAgent(input: {
 
   for (const action of actions) {
     if (!action || typeof action !== "object") continue;
-    results.push(await executeWorkspaceAction({ action, user: input.user, projectRefs }));
+    try {
+      results.push(await executeWorkspaceAction({ action, user: input.user, projectRefs }));
+    } catch (error) {
+      results.push({
+        action: isAgentActionName(action.action) ? action.action : "unknown",
+        ok: false,
+        title: workspaceActionLabel(action.action ?? ""),
+        detail: error instanceof Error ? error.message : "动作执行失败。",
+      });
+    }
   }
 
-  const reply = text(planned.plan?.reply) || "我已经处理好了。";
   const executed = resultBlock(results);
   return {
-    ...planned.completion,
-    content: executed ? `${reply}\n\n${executed}` : reply,
+    ...completion,
+    content: executed ? `${completion.content}\n\n${executed}` : completion.content,
     actions: results,
     plannedActions: actions,
   };
@@ -534,22 +591,28 @@ export async function planWorkspaceActions(input: {
   signal: AbortSignal;
   conversationId: string;
   user: User;
+  assistantContext?: string;
 }): Promise<{ completion: AgentCompletion; plan: WorkspaceAgentPlan | null }> {
   const [systemMessage, ...rest] = input.messages;
   const agentMessages: AgentMessage[] = [
     {
       role: "system",
-      content: `${systemMessage?.content ?? ""}\n\n${actionInstruction()}`,
+      content: [
+        systemMessage?.content ?? "",
+        actionInstruction(),
+        input.assistantContext
+          ? `主 Agent 已完成的回复或调研结果如下。不要重复规划其中已经完成的网页、终端或文件操作；只规划仍需由站内执行器落地的动作：\n${input.assistantContext.slice(0, 8000)}`
+          : "",
+      ]
+        .filter(Boolean)
+        .join("\n\n"),
     },
     ...rest,
   ];
 
-  const completion = await requestAgentCompletion({
+  const completion = await requestAgentPlanningCompletion({
     messages: agentMessages,
-    mode: input.mode,
     signal: input.signal,
-    conversationId: input.conversationId,
-    userId: input.user.id,
   });
 
   const plan = extractPlan(completion.content);

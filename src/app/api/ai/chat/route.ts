@@ -161,7 +161,7 @@ export async function POST(req: NextRequest) {
 
   const mode = cleanMode((body as Record<string, unknown> | null)?.mode);
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 120_000);
+  const timeout = setTimeout(() => controller.abort(), 240_000);
 
   try {
     const existingConversationId =
@@ -181,24 +181,18 @@ export async function POST(req: NextRequest) {
       ? await extractUrlAttachmentsFromText(messageContent)
       : [];
     const attachments = mergeAttachments(incomingAttachments, linkAttachments);
-    const userMessage = appendAiMessage({
+    const persistedMessages = listAiMessages(conversation.id, user.id);
+    const pendingUserMessage: AiMessage = {
+      id: "pending-user-message",
       conversationId: conversation.id,
       userId: user.id,
       role: "user",
       content: messageContent || "请分析我上传的附件。",
       attachments,
-    });
-
-    const persistedMessages = listAiMessages(conversation.id, user.id);
-    const recentMessages = persistedMessages.slice(-MAX_HISTORY);
+      createdAt: new Date().toISOString(),
+    };
+    const recentMessages = [...persistedMessages, pendingUserMessage].slice(-MAX_HISTORY);
     const memory = buildConversationMemory(persistedMessages);
-    updateAiConversation({
-      id: conversation.id,
-      userId: user.id,
-      mode,
-      memory,
-      title: persistedMessages.length === 1 ? titleFromMessage(userMessage.content) : undefined,
-    });
 
     const workspaceContext = await buildAiWorkspaceContext(user);
     const modelMessages = [
@@ -215,6 +209,13 @@ export async function POST(req: NextRequest) {
       signal: controller.signal,
       conversationId: conversation.id,
       user,
+    });
+    const userMessage = appendAiMessage({
+      conversationId: conversation.id,
+      userId: user.id,
+      role: "user",
+      content: pendingUserMessage.content,
+      attachments,
     });
     const run = recordWorkspaceAgentTask({
       prompt: userMessage.content,
@@ -237,6 +238,7 @@ export async function POST(req: NextRequest) {
       userId: user.id,
       mode,
       memory: buildConversationMemory(messages),
+      title: persistedMessages.length === 0 ? titleFromMessage(userMessage.content) : undefined,
     });
 
     return NextResponse.json({
@@ -252,13 +254,16 @@ export async function POST(req: NextRequest) {
       run,
     });
   } catch (error) {
+    console.error("[api/ai/chat] Agent request failed", error);
     if (error instanceof AgentRequestError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
     const message =
       error instanceof Error && error.name === "AbortError"
-        ? "AI 响应超时，请稍后重试。"
-        : "AI 助手暂时不可用，请稍后重试。";
+        ? "Agent 执行超过 4 分钟，任务已停止。请缩小范围后重试。"
+        : error instanceof Error && error.message
+          ? `Agent 执行失败：${error.message.slice(0, 240)}`
+          : "Agent 执行失败，请稍后重试。";
     return NextResponse.json({ error: message }, { status: 502 });
   } finally {
     clearTimeout(timeout);
