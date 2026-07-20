@@ -4,6 +4,7 @@ import {
   SESSION_COOKIE_MAX_AGE,
   createSessionToken,
   hashPassword,
+  isSecureRequest,
   verifyInviteCode,
 } from "@/lib/auth";
 import { createUser, getUserByUsername } from "@/lib/users";
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest) {
   res.cookies.set(SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: isSecureRequest(req),
     path: "/",
     maxAge: SESSION_COOKIE_MAX_AGE,
   });

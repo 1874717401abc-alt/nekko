@@ -9,6 +9,7 @@ export {
   GUEST_COOKIE,
   GUEST_COOKIE_MAX_AGE,
   createSessionToken,
+  isSecureRequest,
   verifySessionToken,
 } from "@/lib/session";
 

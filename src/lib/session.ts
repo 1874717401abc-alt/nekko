@@ -6,6 +6,12 @@ export const GUEST_COOKIE = "nekko_guest";
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 180; // 180 days
 export const GUEST_COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 
+export function isSecureRequest(request: Request): boolean {
+  const forwardedProto = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
+  if (forwardedProto) return forwardedProto === "https";
+  return new URL(request.url).protocol === "https:";
+}
+
 function sessionSecret(): string {
   const secret = process.env.SESSION_SECRET;
   if (!secret && process.env.NODE_ENV === "production") {
