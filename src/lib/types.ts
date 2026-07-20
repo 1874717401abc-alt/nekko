@@ -156,3 +156,43 @@ export type TrashItem = {
   deletedAt: string;
   deletedBy?: string;
 };
+
+export type AiMode = "strategy" | "content" | "review" | "deep";
+
+export type AiAttachmentKind = "upload" | "link";
+
+export type AiAttachment = {
+  id: string;
+  kind: AiAttachmentKind;
+  name: string;
+  mimeType?: string;
+  size?: number;
+  url?: string;
+  text: string;
+  error?: string;
+};
+
+export type AiMessage = {
+  id: string;
+  conversationId: string;
+  userId: string;
+  role: "user" | "assistant";
+  content: string;
+  attachments: AiAttachment[];
+  createdAt: string;
+};
+
+export type AiConversation = {
+  id: string;
+  userId: string;
+  title: string;
+  mode: AiMode;
+  memory: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AiConversationSummary = AiConversation & {
+  lastMessage?: string;
+  messageCount: number;
+};

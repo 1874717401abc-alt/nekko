@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import AIAssistant from "@/components/AIAssistant";
 import PageHeader from "@/components/PageHeader";
 import { getCurrentUser } from "@/lib/auth";
+import { listAiConversations, listAiMessages } from "@/lib/aiConversations";
 import { readData } from "@/lib/store";
 import type { InspirationItem, LibraryItem, ProgressTask, Project } from "@/lib/types";
 
@@ -26,6 +27,11 @@ export default async function AssistantPage() {
     if (!task.dueDate || task.status === "done") return false;
     return task.dueDate < new Date().toISOString().slice(0, 10);
   }).length;
+  const conversations = listAiConversations(currentUser.id);
+  const initialConversation = conversations[0] ?? null;
+  const initialMessages = initialConversation
+    ? listAiMessages(initialConversation.id, currentUser.id)
+    : [];
 
   return (
     <div className="px-6 sm:px-10 lg:px-16 py-14 sm:py-20 max-w-6xl mx-auto">
@@ -35,6 +41,9 @@ export default async function AssistantPage() {
         description="把工作台里的项目、任务、灵感和资料变成更快的创作判断。"
       />
       <AIAssistant
+        initialConversations={conversations}
+        initialConversation={initialConversation}
+        initialMessages={initialMessages}
         snapshot={[
           { label: "项目", value: String(projects.length) },
           { label: "进行中", value: String(doing) },
