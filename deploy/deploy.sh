@@ -8,6 +8,8 @@ BRANCH="${BRANCH:-main}"
 HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:3000/api/health}"
 BACKUP_DIR="${BACKUP_DIR:-/opt}"
 BACKUP_RETENTION="${BACKUP_RETENTION:-5}"
+DEPLOY_REEXEC="${DEPLOY_REEXEC:-0}"
+DEPLOY_BASE_REVISION="${DEPLOY_BASE_REVISION:-}"
 
 cd "$APP_DIR"
 
@@ -33,7 +35,7 @@ fi
 
 echo "Fetching origin/$BRANCH"
 git fetch origin "$BRANCH"
-previous_revision="$(git rev-parse HEAD)"
+previous_revision="${DEPLOY_BASE_REVISION:-$(git rev-parse HEAD)}"
 
 if ! git diff --quiet -- package-lock.json; then
   echo "Resetting server-generated package-lock.json changes"
@@ -41,6 +43,15 @@ if ! git diff --quiet -- package-lock.json; then
 fi
 
 git pull --ff-only origin "$BRANCH"
+
+if [ "$DEPLOY_REEXEC" != "1" ] \
+  && ! git diff --quiet "$previous_revision" HEAD -- deploy/deploy.sh; then
+  echo "Deploy script changed; restarting with the updated version"
+  exec env \
+    DEPLOY_REEXEC=1 \
+    DEPLOY_BASE_REVISION="$previous_revision" \
+    bash "$APP_DIR/deploy/deploy.sh"
+fi
 
 hermes_was_online=0
 hermes_pid="$(pm2 pid "$HERMES_PM2_APP" 2>/dev/null || true)"
