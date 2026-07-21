@@ -11,10 +11,11 @@ export async function proxy(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/login") ||
     request.nextUrl.pathname.startsWith("/register");
   const isAuthApi = request.nextUrl.pathname.startsWith("/api/auth");
+  const isHealthApi = request.nextUrl.pathname === "/api/health";
   const isCronApi = request.nextUrl.pathname === "/api/ai/content-radar";
   const isHome = request.nextUrl.pathname === "/";
 
-  if (isAuthApi || isCronApi) {
+  if (isAuthApi || isHealthApi || isCronApi) {
     return NextResponse.next();
   }
 

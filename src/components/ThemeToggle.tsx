@@ -13,7 +13,7 @@ function getSnapshot() {
 }
 
 function getServerSnapshot() {
-  return false;
+  return true;
 }
 
 export default function ThemeToggle({ className = "" }: { className?: string }) {

@@ -217,21 +217,25 @@ export async function POST(req: NextRequest) {
       content: pendingUserMessage.content,
       attachments,
     });
-    const run = recordWorkspaceAgentTask({
-      prompt: userMessage.content,
-      mode,
-      user,
-      summary: completion.content,
-      actions: completion.plannedActions,
-      results: completion.actions,
-    });
-
     const assistantMessage = appendAiMessage({
       conversationId: conversation.id,
       userId: user.id,
       role: "assistant",
       content: completion.content,
     });
+    let run = null;
+    try {
+      run = recordWorkspaceAgentTask({
+        prompt: userMessage.content,
+        mode,
+        user,
+        summary: completion.content,
+        actions: completion.plannedActions,
+        results: completion.actions,
+      });
+    } catch (error) {
+      console.error("[api/ai/chat] Failed to record Agent task", error);
+    }
     const messages = listAiMessages(conversation.id, user.id);
     const updatedConversation = updateAiConversation({
       id: conversation.id,
