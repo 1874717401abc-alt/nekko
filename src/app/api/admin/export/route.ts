@@ -5,11 +5,14 @@ import { listUsers } from "@/lib/users";
 import type {
   ActivityEvent,
   CheckIn,
+  CostItem,
   HeroContent,
   InspirationItem,
   LibraryItem,
   ProgressTask,
   Project,
+  ProjectMilestone,
+  ScriptScene,
 } from "@/lib/types";
 
 export async function GET() {
@@ -36,6 +39,9 @@ export async function GET() {
       progress: listAllDataItems<ProgressTask>("progress"),
       inspiration: listAllDataItems<InspirationItem>("inspiration"),
       library: listAllDataItems<LibraryItem>("library"),
+      scripts: listAllDataItems<ScriptScene>("scripts"),
+      costs: listAllDataItems<CostItem>("costs"),
+      milestones: listAllDataItems<ProjectMilestone>("milestones"),
       checkins: listAllDataItems<CheckIn>("checkins"),
       activity,
       heroImages,

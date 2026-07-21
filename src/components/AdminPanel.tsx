@@ -214,6 +214,9 @@ export default function AdminPanel({
     inspiration: "灵感",
     library: "资料",
     checkins: "打卡",
+    scripts: "脚本",
+    costs: "成本",
+    milestones: "里程碑",
   };
 
   return (
@@ -224,7 +227,7 @@ export default function AdminPanel({
           数据备份
         </h2>
         <p className="text-xs text-ink-soft mb-5">
-          导出当前工作台数据，包含项目、任务、灵感、资料、打卡、活动记录和成员资料。
+          导出当前工作台数据，包含项目、脚本、成本、排期、任务、素材、活动记录和成员资料。
         </p>
         <a
           href="/api/admin/export"
@@ -241,7 +244,7 @@ export default function AdminPanel({
           回收站
         </h2>
         <p className="text-xs text-ink-soft mb-5">
-          最近删除的项目、任务、灵感、资料和打卡会先进入这里，管理员可以恢复或永久删除。
+          最近删除的项目内容会先进入这里，管理员可以恢复或永久删除。
         </p>
         {trashError && <p className="text-xs text-red-400 mb-3">{trashError}</p>}
         <div className="flex flex-col gap-3">

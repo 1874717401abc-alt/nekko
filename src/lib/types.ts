@@ -35,6 +35,67 @@ export type Project = {
   name: string;
   description?: string;
   tags: string[];
+  budget?: number;
+  createdAt: string;
+  createdBy: string;
+  createdById?: string;
+  deletedAt?: string;
+  deletedBy?: string;
+  deletedById?: string;
+};
+
+export type ScriptSceneType = "hook" | "narration" | "broll" | "interview" | "outro";
+export type ScriptSceneStatus = "draft" | "ready" | "shot";
+
+export type ScriptScene = {
+  id: string;
+  projectId: string;
+  order: number;
+  title: string;
+  type: ScriptSceneType;
+  duration: number;
+  script: string;
+  visual?: string;
+  assignee?: string;
+  status: ScriptSceneStatus;
+  createdAt: string;
+  createdBy: string;
+  createdById?: string;
+  deletedAt?: string;
+  deletedBy?: string;
+  deletedById?: string;
+};
+
+export type CostStatus = "planned" | "approved" | "paid";
+
+export type CostItem = {
+  id: string;
+  projectId: string;
+  title: string;
+  category: string;
+  amount: number;
+  status: CostStatus;
+  vendor?: string;
+  date?: string;
+  note?: string;
+  createdAt: string;
+  createdBy: string;
+  createdById?: string;
+  deletedAt?: string;
+  deletedBy?: string;
+  deletedById?: string;
+};
+
+export type MilestoneStatus = "planned" | "doing" | "done";
+
+export type ProjectMilestone = {
+  id: string;
+  projectId: string;
+  title: string;
+  date: string;
+  status: MilestoneStatus;
+  assignee?: string;
+  note?: string;
   createdAt: string;
   createdBy: string;
   createdById?: string;
@@ -146,7 +207,15 @@ export type CheckIn = {
   deletedById?: string;
 };
 
-export type TrashResource = "projects" | "progress" | "inspiration" | "library" | "checkins";
+export type TrashResource =
+  | "projects"
+  | "progress"
+  | "inspiration"
+  | "library"
+  | "checkins"
+  | "scripts"
+  | "costs"
+  | "milestones";
 
 export type TrashItem = {
   resource: TrashResource;

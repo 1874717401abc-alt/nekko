@@ -9,6 +9,9 @@ export type ResourceName =
   | "hero"
   | "heroContent"
   | "projects"
+  | "scripts"
+  | "costs"
+  | "milestones"
   | "activity";
 
 const ALLOWED: ResourceName[] = [
@@ -19,6 +22,9 @@ const ALLOWED: ResourceName[] = [
   "hero",
   "heroContent",
   "projects",
+  "scripts",
+  "costs",
+  "milestones",
   "activity",
 ];
 
@@ -256,6 +262,14 @@ export function hardDeleteProjectAndUnlink(projectId: string): ResourceItem | nu
       }
     }
 
+    for (const resource of ["scripts", "costs", "milestones"] as ItemResourceName[]) {
+      const items = readResourceItems<ResourceItem>(resource);
+      const next = items.filter((item) => item.projectId !== projectId);
+      if (next.length !== items.length) {
+        writeResourceItems(resource, next);
+      }
+    }
+
     return project;
   });
   return tx();
@@ -282,11 +296,29 @@ function subtitleFromTrashItem(resource: ItemResourceName, item: ResourceItem): 
   if (resource === "inspiration" && Array.isArray(item.tags) && item.tags.length > 0) {
     return item.tags.filter((tag) => typeof tag === "string").join(", ");
   }
+  if (resource === "scripts" && typeof item.duration === "number") {
+    return `${item.duration} 秒`;
+  }
+  if (resource === "costs" && typeof item.amount === "number") {
+    return `¥${item.amount.toLocaleString("zh-CN")}`;
+  }
+  if (resource === "milestones" && typeof item.date === "string") {
+    return item.date;
+  }
   return undefined;
 }
 
 export function listTrashItems(): TrashItem[] {
-  const resources: TrashResource[] = ["projects", "progress", "inspiration", "library", "checkins"];
+  const resources: TrashResource[] = [
+    "projects",
+    "progress",
+    "inspiration",
+    "library",
+    "checkins",
+    "scripts",
+    "costs",
+    "milestones",
+  ];
   return resources
     .flatMap((resource) =>
       listDeletedDataItems<ResourceItem>(resource).map((item) => ({

@@ -5,7 +5,15 @@ import path from "path";
 const DATA_DIR = path.join(process.cwd(), "data");
 const DB_PATH = path.join(DATA_DIR, "nekko.db");
 
-const RESOURCES = ["inspiration", "library", "progress", "checkins"] as const;
+const RESOURCES = [
+  "inspiration",
+  "library",
+  "progress",
+  "checkins",
+  "scripts",
+  "costs",
+  "milestones",
+] as const;
 
 let db: Database.Database | null = null;
 

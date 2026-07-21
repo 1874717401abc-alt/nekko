@@ -1,12 +1,19 @@
 import { randomUUID } from "crypto";
 import type {
   CheckIn,
+  CostItem,
+  CostStatus,
   InspirationItem,
   LibraryItem,
+  MilestoneStatus,
   ProgressComment,
   ProgressLogEntry,
   ProgressTask,
   Project,
+  ProjectMilestone,
+  ScriptScene,
+  ScriptSceneStatus,
+  ScriptSceneType,
   TaskPriority,
   TaskStatus,
   User,
@@ -18,6 +25,10 @@ type RuleResult<T extends { id: string }> = { item: T } | { error: string; statu
 
 const TASK_STATUSES: TaskStatus[] = ["todo", "doing", "done"];
 const TASK_PRIORITIES: TaskPriority[] = ["low", "normal", "high"];
+const SCRIPT_TYPES: ScriptSceneType[] = ["hook", "narration", "broll", "interview", "outro"];
+const SCRIPT_STATUSES: ScriptSceneStatus[] = ["draft", "ready", "shot"];
+const COST_STATUSES: CostStatus[] = ["planned", "approved", "paid"];
+const MILESTONE_STATUSES: MilestoneStatus[] = ["planned", "doing", "done"];
 
 function text(body: Body, key: string): string {
   return typeof body[key] === "string" ? body[key].trim() : "";
@@ -40,6 +51,17 @@ function projectId(body: Body): string | undefined {
   return optionalText(body, "projectId");
 }
 
+function numeric(body: Body, key: string): number | undefined {
+  const raw = body[key];
+  const value = typeof raw === "number" ? raw : typeof raw === "string" ? Number(raw) : NaN;
+  return Number.isFinite(value) ? value : undefined;
+}
+
+function dateValue(body: Body, key: string): string | undefined {
+  const value = optionalText(body, key);
+  return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : undefined;
+}
+
 function todayKey() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
@@ -60,9 +82,7 @@ function taskPriority(value: unknown): TaskPriority {
 }
 
 function dueDate(body: Body): string | undefined {
-  const value = optionalText(body, "dueDate");
-  if (!value) return undefined;
-  return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : undefined;
+  return dateValue(body, "dueDate");
 }
 
 function ensureUrl(value: string | undefined, required: boolean): RuleResult<ResourceItem> | null {
@@ -92,6 +112,7 @@ export function createResourceItem(
         name,
         description: optionalText(body, "description"),
         tags: stringList(body, "tags"),
+        budget: Math.max(0, numeric(body, "budget") ?? 0),
         createdAt: new Date().toISOString(),
         createdBy: user.displayName,
         createdById: user.id,
@@ -166,6 +187,86 @@ export function createResourceItem(
     };
   }
 
+  if (resource === "scripts") {
+    const title = text(body, "title");
+    const linkedProjectId = projectId(body);
+    if (!linkedProjectId) return bad("请选择项目");
+    if (!title) return bad("镜头标题不能为空");
+    return {
+      item: {
+        id: `scene-${randomUUID()}`,
+        projectId: linkedProjectId,
+        order: Math.max(0, Math.round(numeric(body, "order") ?? 0)),
+        title,
+        type: SCRIPT_TYPES.includes(body.type as ScriptSceneType)
+          ? (body.type as ScriptSceneType)
+          : "narration",
+        duration: Math.max(1, Math.min(3600, Math.round(numeric(body, "duration") ?? 15))),
+        script: text(body, "script"),
+        visual: optionalText(body, "visual"),
+        assignee: optionalText(body, "assignee"),
+        status: SCRIPT_STATUSES.includes(body.status as ScriptSceneStatus)
+          ? (body.status as ScriptSceneStatus)
+          : "draft",
+        createdAt: new Date().toISOString(),
+        createdBy: user.displayName,
+        createdById: user.id,
+      } satisfies ScriptScene,
+    };
+  }
+
+  if (resource === "costs") {
+    const title = text(body, "title");
+    const linkedProjectId = projectId(body);
+    const amount = numeric(body, "amount");
+    if (!linkedProjectId) return bad("请选择项目");
+    if (!title) return bad("费用名称不能为空");
+    if (amount === undefined || amount < 0) return bad("请输入正确的金额");
+    return {
+      item: {
+        id: `cost-${randomUUID()}`,
+        projectId: linkedProjectId,
+        title,
+        category: optionalText(body, "category") ?? "其他",
+        amount: Math.round(amount * 100) / 100,
+        status: COST_STATUSES.includes(body.status as CostStatus)
+          ? (body.status as CostStatus)
+          : "planned",
+        vendor: optionalText(body, "vendor"),
+        date: dateValue(body, "date"),
+        note: optionalText(body, "note"),
+        createdAt: new Date().toISOString(),
+        createdBy: user.displayName,
+        createdById: user.id,
+      } satisfies CostItem,
+    };
+  }
+
+  if (resource === "milestones") {
+    const title = text(body, "title");
+    const linkedProjectId = projectId(body);
+    const date = dateValue(body, "date");
+    if (!linkedProjectId) return bad("请选择项目");
+    if (!title) return bad("里程碑名称不能为空");
+    if (!date) return bad("请选择日期");
+    return {
+      item: {
+        id: `milestone-${randomUUID()}`,
+        projectId: linkedProjectId,
+        title,
+        date,
+        status: MILESTONE_STATUSES.includes(body.status as MilestoneStatus)
+          ? (body.status as MilestoneStatus)
+          : "planned",
+        assignee: optionalText(body, "assignee"),
+        note: optionalText(body, "note"),
+        createdAt: new Date().toISOString(),
+        createdBy: user.displayName,
+        createdById: user.id,
+      } satisfies ProjectMilestone,
+    };
+  }
+
   const note = optionalText(body, "note");
   return {
     item: {
@@ -193,6 +294,8 @@ export function patchResourceItem(
         name,
         description: "description" in body ? optionalText(body, "description") : existing.description,
         tags: "tags" in body ? stringList(body, "tags") : existing.tags,
+        budget:
+          "budget" in body ? Math.max(0, numeric(body, "budget") ?? 0) : existing.budget,
       } satisfies Project,
     };
   }
@@ -258,6 +361,78 @@ export function patchResourceItem(
         note: "note" in body ? optionalText(body, "note") : existing.note,
         projectId: "projectId" in body ? projectId(body) : existing.projectId,
       } satisfies LibraryItem,
+    };
+  }
+
+  if (resource === "scripts") {
+    const existing = item as ScriptScene;
+    const title = "title" in body ? text(body, "title") : existing.title;
+    if (!title) return bad("镜头标题不能为空");
+    return {
+      item: {
+        ...existing,
+        title,
+        order:
+          "order" in body
+            ? Math.max(0, Math.round(numeric(body, "order") ?? existing.order))
+            : existing.order,
+        type: SCRIPT_TYPES.includes(body.type as ScriptSceneType)
+          ? (body.type as ScriptSceneType)
+          : existing.type,
+        duration:
+          "duration" in body
+            ? Math.max(1, Math.min(3600, Math.round(numeric(body, "duration") ?? existing.duration)))
+            : existing.duration,
+        script: "script" in body ? text(body, "script") : existing.script,
+        visual: "visual" in body ? optionalText(body, "visual") : existing.visual,
+        assignee: "assignee" in body ? optionalText(body, "assignee") : existing.assignee,
+        status: SCRIPT_STATUSES.includes(body.status as ScriptSceneStatus)
+          ? (body.status as ScriptSceneStatus)
+          : existing.status,
+      } satisfies ScriptScene,
+    };
+  }
+
+  if (resource === "costs") {
+    const existing = item as CostItem;
+    const title = "title" in body ? text(body, "title") : existing.title;
+    const amount = "amount" in body ? numeric(body, "amount") : existing.amount;
+    if (!title) return bad("费用名称不能为空");
+    if (amount === undefined || amount < 0) return bad("请输入正确的金额");
+    return {
+      item: {
+        ...existing,
+        title,
+        category:
+          "category" in body ? optionalText(body, "category") ?? "其他" : existing.category,
+        amount: Math.round(amount * 100) / 100,
+        status: COST_STATUSES.includes(body.status as CostStatus)
+          ? (body.status as CostStatus)
+          : existing.status,
+        vendor: "vendor" in body ? optionalText(body, "vendor") : existing.vendor,
+        date: "date" in body ? dateValue(body, "date") : existing.date,
+        note: "note" in body ? optionalText(body, "note") : existing.note,
+      } satisfies CostItem,
+    };
+  }
+
+  if (resource === "milestones") {
+    const existing = item as ProjectMilestone;
+    const title = "title" in body ? text(body, "title") : existing.title;
+    const date = "date" in body ? dateValue(body, "date") : existing.date;
+    if (!title) return bad("里程碑名称不能为空");
+    if (!date) return bad("请选择日期");
+    return {
+      item: {
+        ...existing,
+        title,
+        date,
+        status: MILESTONE_STATUSES.includes(body.status as MilestoneStatus)
+          ? (body.status as MilestoneStatus)
+          : existing.status,
+        assignee: "assignee" in body ? optionalText(body, "assignee") : existing.assignee,
+        note: "note" in body ? optionalText(body, "note") : existing.note,
+      } satisfies ProjectMilestone,
     };
   }
 

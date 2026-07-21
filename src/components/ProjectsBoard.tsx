@@ -5,7 +5,7 @@ import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { Plus, Search, Trash2 } from "lucide-react";
 import { createItem, deleteItem } from "@/lib/clientData";
-import type { InspirationItem, LibraryItem, Project, ProgressTask } from "@/lib/types";
+import type { CostItem, InspirationItem, LibraryItem, Project, ProjectMilestone, ProgressTask, ScriptScene } from "@/lib/types";
 
 const easeOut = [0.22, 1, 0.36, 1] as const;
 
@@ -22,11 +22,17 @@ export default function ProjectsBoard({
   inspiration,
   library,
   progress,
+  scripts,
+  costs,
+  milestones,
 }: {
   initialProjects: Project[];
   inspiration: InspirationItem[];
   library: LibraryItem[];
   progress: ProgressTask[];
+  scripts: ScriptScene[];
+  costs: CostItem[];
+  milestones: ProjectMilestone[];
 }) {
   const [projects, setProjects] = useState<Project[]>(initialProjects);
   const [showForm, setShowForm] = useState(false);
@@ -41,11 +47,13 @@ export default function ProjectsBoard({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState("");
+  const [budget, setBudget] = useState("");
 
   function resetForm() {
     setName("");
     setDescription("");
     setTags("");
+    setBudget("");
     setShowForm(false);
   }
 
@@ -63,6 +71,7 @@ export default function ProjectsBoard({
           .split(/[,，]/)
           .map((t) => t.trim())
           .filter(Boolean),
+        budget: Number(budget) || 0,
       });
       setProjects((current) => [newProject, ...current]);
       resetForm();
@@ -111,6 +120,9 @@ export default function ProjectsBoard({
       inspiration: inspiration.filter((i) => i.projectId === projectId).length,
       library: library.filter((i) => i.projectId === projectId).length,
       progress: progress.filter((t) => t.projectId === projectId).length,
+      scripts: scripts.filter((item) => item.projectId === projectId).length,
+      costs: costs.filter((item) => item.projectId === projectId).reduce((sum, item) => sum + item.amount, 0),
+      milestones: milestones.filter((item) => item.projectId === projectId).length,
     };
   }
 
@@ -203,6 +215,18 @@ export default function ProjectsBoard({
                 placeholder="拍摄, 选题"
               />
             </div>
+            <div className="sm:col-span-2">
+              <label className="block text-xs text-ink-soft mb-1.5">项目预算</label>
+              <input
+                type="number"
+                min="0"
+                step="100"
+                value={budget}
+                onChange={(event) => setBudget(event.target.value)}
+                className="w-full rounded-lg border border-line bg-paper px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent"
+                placeholder="0"
+              />
+            </div>
             <div className="sm:col-span-2 flex justify-end">
               <button
                 type="submit"
@@ -264,11 +288,12 @@ export default function ProjectsBoard({
                     ))}
                   </div>
                 )}
-                <div className="mt-auto flex items-center justify-between gap-2 text-[11px] text-ink-soft">
-                  <span>
-                    灵感 {c.inspiration} · 资料 {c.library} · 任务 {c.progress}
-                  </span>
-                  <span className="shrink-0">{formatDate(project.createdAt)}</span>
+                <div className="mt-auto border-t border-line/70 pt-3 text-[11px] text-ink-soft">
+                  <div className="flex items-center justify-between gap-2">
+                    <span>镜头 {c.scripts} · 任务 {c.progress} · 节点 {c.milestones}</span>
+                    <span className="shrink-0">{formatDate(project.createdAt)}</span>
+                  </div>
+                  <p className="mt-1">成本 ¥{c.costs.toLocaleString("zh-CN")} · 素材 {c.inspiration + c.library}</p>
                 </div>
               </motion.div>
             );

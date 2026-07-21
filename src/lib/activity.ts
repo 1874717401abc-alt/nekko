@@ -9,6 +9,9 @@ const resourceLabels: Record<string, string> = {
   progress: "任务",
   inspiration: "灵感",
   library: "资料",
+  scripts: "脚本镜头",
+  costs: "成本",
+  milestones: "里程碑",
   checkins: "打卡",
 };
 

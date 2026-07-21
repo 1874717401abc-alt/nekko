@@ -21,6 +21,9 @@ export type WorkspaceAgentActionName =
   | "create_task"
   | "create_inspiration"
   | "create_library"
+  | "create_script_scene"
+  | "create_cost"
+  | "create_milestone"
   | "run_content_radar"
   | "normalize_inspiration_tags"
   | "organize_inspirations";
@@ -57,6 +60,9 @@ const ACTIONS = new Set<WorkspaceAgentActionName>([
   "create_task",
   "create_inspiration",
   "create_library",
+  "create_script_scene",
+  "create_cost",
+  "create_milestone",
   "run_content_radar",
   "normalize_inspiration_tags",
   "organize_inspirations",
@@ -103,6 +109,9 @@ export function workspaceActionLabel(action: WorkspaceAgentActionName | string) 
     create_task: "创建任务",
     create_inspiration: "创建灵感",
     create_library: "创建资料",
+    create_script_scene: "创建脚本镜头",
+    create_cost: "登记项目成本",
+    create_milestone: "创建项目里程碑",
     run_content_radar: "运行内容雷达",
     normalize_inspiration_tags: "整理灵感标签",
     organize_inspirations: "智能整理灵感",
@@ -134,6 +143,9 @@ function resourceForAction(action: WorkspaceAgentActionName): ItemResourceName |
   if (action === "create_task") return "progress";
   if (action === "create_inspiration") return "inspiration";
   if (action === "create_library") return "library";
+  if (action === "create_script_scene") return "scripts";
+  if (action === "create_cost") return "costs";
+  if (action === "create_milestone") return "milestones";
   return null;
 }
 
@@ -168,7 +180,14 @@ function normalizeActionData(
   projectRefs: Map<string, string>,
   projects: Project[]
 ) {
-  if (action === "create_task" || action === "create_inspiration" || action === "create_library") {
+  if (
+    action === "create_task" ||
+    action === "create_inspiration" ||
+    action === "create_library" ||
+    action === "create_script_scene" ||
+    action === "create_cost" ||
+    action === "create_milestone"
+  ) {
     return {
       ...data,
       projectId: resolveProjectId(data, projectRefs, projects),
@@ -187,6 +206,9 @@ function actionInstruction() {
     "- create_task: data = { title, description?, assignee?, status?, priority?, dueDate?, projectId?, projectName?, projectRef? }",
     "- create_inspiration: data = { title, type?, url?, note?, tags?, projectId?, projectName?, projectRef? }",
     "- create_library: data = { title, type?, url, category?, note?, projectId?, projectName?, projectRef? }",
+    "- create_script_scene: data = { title, type?, duration?, script?, visual?, assignee?, status?, order?, projectId?, projectName?, projectRef? }，type 为 hook/narration/broll/interview/outro。",
+    "- create_cost: data = { title, category?, amount, status?, vendor?, date?, note?, projectId?, projectName?, projectRef? }，status 为 planned/approved/paid。",
+    "- create_milestone: data = { title, date, status?, assignee?, note?, projectId?, projectName?, projectRef? }，status 为 planned/doing/done。",
     "- run_content_radar: data = { limit? }，用于用户要求采集/扒 B站/生成今日趋势灵感。",
     "- normalize_inspiration_tags: data = { scope?, tags? }，用于用户要求整理灵感标签、清理内容雷达标签、B站趋势标签太多。scope 可为 ai_radar、bilibili、all；默认 ai_radar。tags 默认 [\"AI选题\", \"B站热门\"]。",
     "- organize_inspirations: data = { scope? }，用于用户要求整理、归类、清理整个灵感库。scope 可为 all、recent、bilibili；默认 all。它会统一主题标签并标记疑似重复，但不会删除原内容。",
@@ -207,8 +229,8 @@ export function shouldPlanWorkspaceActions(message: string) {
   if (!normalized) return false;
 
   const patterns = [
-    /(?:新建|创建|建立|添加|记录|保存|存入|放进|加入).{0,24}(?:项目|任务|灵感|资料|工作台|灵感库|资料库)/i,
-    /(?:项目|任务|灵感|资料|工作台|灵感库|资料库).{0,24}(?:新建|创建|添加|记录|保存|整理|归类|清理|统一|拆分|安排)/i,
+    /(?:新建|创建|建立|添加|记录|保存|存入|放进|加入|登记).{0,24}(?:项目|任务|灵感|资料|脚本|镜头|成本|费用|预算|里程碑|排期|工作台|灵感库|资料库)/i,
+    /(?:项目|任务|灵感|资料|脚本|镜头|成本|费用|预算|里程碑|排期|工作台|灵感库|资料库).{0,24}(?:新建|创建|添加|记录|保存|整理|归类|清理|统一|拆分|安排|登记)/i,
     /(?:整理|归类|清理|统一).{0,16}(?:灵感|标签|灵感库)/i,
     /(?:采集|抓取|扒|生成).{0,18}(?:B站|b站|哔哩|热门|趋势|今日).{0,20}(?:选题|灵感)/i,
     /(?:内容雷达|拆成.{0,10}任务|拆解成.{0,10}任务)/i,

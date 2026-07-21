@@ -4,21 +4,38 @@ import { ArrowLeft } from "lucide-react";
 import ProjectDetail from "@/components/ProjectDetail";
 import { getCurrentUser } from "@/lib/auth";
 import { readData } from "@/lib/store";
-import type { InspirationItem, LibraryItem, Project, ProgressTask } from "@/lib/types";
+import type {
+  CostItem,
+  InspirationItem,
+  LibraryItem,
+  Project,
+  ProjectMilestone,
+  ProgressTask,
+  ScriptScene,
+} from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProjectDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }) {
   const { id } = await params;
-  const [projects, inspiration, library, progress, currentUser] = await Promise.all([
+  const { tab } = await searchParams;
+  const initialTab = ["overview", "script", "costs", "schedule", "assets"].includes(tab ?? "")
+    ? (tab as "overview" | "script" | "costs" | "schedule" | "assets")
+    : "overview";
+  const [projects, inspiration, library, progress, scripts, costs, milestones, currentUser] = await Promise.all([
     readData<Project[]>("projects"),
     readData<InspirationItem[]>("inspiration"),
     readData<LibraryItem[]>("library"),
     readData<ProgressTask[]>("progress"),
+    readData<ScriptScene[]>("scripts"),
+    readData<CostItem[]>("costs"),
+    readData<ProjectMilestone[]>("milestones"),
     getCurrentUser(),
   ]);
 
@@ -41,10 +58,15 @@ export default async function ProjectDetailPage({
         返回项目列表
       </Link>
       <ProjectDetail
+        key={`${id}-${initialTab}`}
         project={project}
         inspiration={inspiration}
         library={library}
         progress={progress}
+        scripts={scripts}
+        costs={costs}
+        milestones={milestones}
+        initialTab={initialTab}
       />
     </div>
   );
