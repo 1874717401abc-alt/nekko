@@ -12,7 +12,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
     <>
       <Sidebar />
       <main
-        className={`min-h-screen min-w-0 flex-1 ${isAuthPage ? "" : "pb-20 md:ml-60 md:pb-0"}`}
+        className={`min-h-dvh min-w-0 flex-1 ${isAuthPage ? "" : "pb-[calc(5rem+env(safe-area-inset-bottom))] md:ml-60 md:pb-0"}`}
       >
         {children}
       </main>

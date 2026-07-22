@@ -193,7 +193,7 @@ export default function Sidebar() {
         )}
       </aside>
 
-      <header className="sticky top-0 z-30 flex h-14 items-center border-b border-line bg-paper/95 px-4 backdrop-blur md:hidden">
+      <header className="sticky top-0 z-30 flex h-[calc(3.5rem+env(safe-area-inset-top))] items-center border-b border-line bg-paper/95 px-4 pt-[env(safe-area-inset-top)] backdrop-blur md:hidden">
         <Link href="/" className="font-serif-display text-xl italic text-ink">Nekko</Link>
         {activeItem && <span className="ml-2 border-l border-line pl-2 text-xs text-ink-soft">{activeItem.label}</span>}
         <div className="ml-auto flex items-center gap-2">
@@ -202,7 +202,7 @@ export default function Sidebar() {
         </div>
       </header>
 
-      <nav className={`fixed inset-x-0 bottom-0 z-40 grid h-[68px] border-t border-line bg-paper-soft/95 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden ${isGuestView ? "grid-cols-3" : "grid-cols-5"}`} aria-label="手机主导航">
+      <nav className={`fixed inset-x-0 bottom-0 z-40 grid h-[calc(68px+env(safe-area-inset-bottom))] border-t border-line bg-paper-soft/95 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden ${isGuestView ? "grid-cols-3" : "grid-cols-5"}`} aria-label="手机主导航">
         {primaryItems.map((item) => {
           const active = isActive(pathname, item.href);
           const Icon = item.icon;

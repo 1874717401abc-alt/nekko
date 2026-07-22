@@ -49,6 +49,12 @@
 html,
 body {
   height: 100%;
+  min-height: 100dvh;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
@@ -79,4 +85,12 @@ body {
 }
 ::-webkit-scrollbar-track {
   background: transparent;
+}
+
+@media (max-width: 767px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
 }
