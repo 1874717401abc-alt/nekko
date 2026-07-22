@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { ExternalLink, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
+import { ClipboardPaste, ExternalLink, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
 import { createItem, deleteItem, patchItem } from "@/lib/clientData";
 import type { InspirationItem, Project } from "@/lib/types";
 
@@ -26,20 +27,23 @@ export default function InspirationBoard({
   initialItems,
   projects,
   canRunRadar = false,
+  sharedDraft,
 }: {
   initialItems: InspirationItem[];
   projects: Project[];
   canRunRadar?: boolean;
+  sharedDraft?: { title: string; url: string; note: string };
 }) {
+  const router = useRouter();
   const [items, setItems] = useState<InspirationItem[]>(initialItems);
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] = useState(Boolean(sharedDraft));
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [activeProject, setActiveProject] = useState<string>("");
 
-  const [title, setTitle] = useState("");
-  const [type, setType] = useState<InspirationItem["type"]>("note");
-  const [url, setUrl] = useState("");
-  const [note, setNote] = useState("");
+  const [title, setTitle] = useState(sharedDraft?.title ?? "");
+  const [type, setType] = useState<InspirationItem["type"]>(sharedDraft?.url ? "link" : "note");
+  const [url, setUrl] = useState(sharedDraft?.url ?? "");
+  const [note, setNote] = useState(sharedDraft?.note ?? "");
   const [tags, setTags] = useState("");
   const [projectId, setProjectId] = useState("");
 
@@ -95,6 +99,7 @@ export default function InspirationBoard({
       });
       setItems((current) => [newItem, ...current]);
       resetForm();
+      if (sharedDraft) router.replace("/inspiration", { scroll: false });
     } catch (err) {
       setError(err instanceof Error ? err.message : "保存失败，请重试。");
     } finally {
@@ -141,6 +146,26 @@ export default function InspirationBoard({
       setError("Agent 采集失败，请稍后重试。");
     } finally {
       setRadarRunning(false);
+    }
+  }
+
+  async function importClipboard() {
+    setError(null);
+    try {
+      const content = (await navigator.clipboard.readText()).trim();
+      if (!content) {
+        setError("剪贴板里没有可导入的内容。");
+        return;
+      }
+      const foundUrl = content.match(/https?:\/\/[^\s]+/i)?.[0] ?? "";
+      const text = content.replace(foundUrl, "").trim();
+      setTitle((text.split(/\r?\n/)[0] || "剪贴板灵感").slice(0, 160));
+      setUrl(foundUrl);
+      setNote(text.includes("\n") ? text : "");
+      setType(foundUrl ? "link" : "note");
+      setShowForm(true);
+    } catch {
+      setError("浏览器未允许读取剪贴板，请使用新建灵感手动粘贴。");
     }
   }
 
@@ -236,8 +261,17 @@ export default function InspirationBoard({
           </button>
         )}
         <button
+          type="button"
+          onClick={importClipboard}
+          title="从剪贴板导入"
+          aria-label="从剪贴板导入灵感"
+          className={`${canRunRadar ? "" : "ml-auto"} flex h-9 w-9 items-center justify-center rounded-md border border-line text-ink-soft transition-colors hover:border-accent hover:text-accent`}
+        >
+          <ClipboardPaste className="h-4 w-4" />
+        </button>
+        <button
           onClick={() => setShowForm((v) => !v)}
-          className={`${canRunRadar ? "" : "ml-auto"} inline-flex h-9 items-center gap-2 rounded-md bg-ink px-3 text-xs font-medium text-paper hover:bg-ink/85 transition-colors`}
+          className="inline-flex h-9 items-center gap-2 rounded-md bg-ink px-3 text-xs font-medium text-paper hover:bg-ink/85 transition-colors"
         >
           <Plus className={`h-4 w-4 ${showForm ? "rotate-45" : ""}`} />
           {showForm ? "取消" : "新建灵感"}
