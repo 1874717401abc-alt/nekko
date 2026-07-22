@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AlertTriangle, Check, Edit3, Plus, Trash2, WalletCards } from "lucide-react";
 import { createItem, deleteItem, patchItem } from "@/lib/clientData";
 import type { CostItem, CostStatus, Project } from "@/lib/types";
@@ -48,6 +49,7 @@ export default function ProjectCostLedger({
   project: Project;
   initialCosts: CostItem[];
 }) {
+  const router = useRouter();
   const [costs, setCosts] = useState(initialCosts);
   const [budget, setBudget] = useState(project.budget ?? 0);
   const [budgetInput, setBudgetInput] = useState(String(project.budget ?? ""));
@@ -66,6 +68,11 @@ export default function ProjectCostLedger({
   const paid = costs.filter((item) => item.status === "paid").reduce((sum, item) => sum + item.amount, 0);
   const committed = costs.filter((item) => item.status !== "planned").reduce((sum, item) => sum + item.amount, 0);
   const remaining = budget - total;
+  const categoryTotals = useMemo(() => {
+    const grouped = new Map<string, number>();
+    costs.forEach((item) => grouped.set(item.category, (grouped.get(item.category) ?? 0) + item.amount));
+    return [...grouped.entries()].map(([category, amount]) => ({ category, amount })).sort((a, b) => b.amount - a.amount);
+  }, [costs]);
 
   function resetForm() {
     setForm(emptyForm);
@@ -96,6 +103,7 @@ export default function ProjectCostLedger({
       setBudget(updated.budget ?? 0);
       setBudgetInput(String(updated.budget ?? ""));
       setEditingBudget(false);
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "预算保存失败。");
     } finally {
@@ -127,6 +135,7 @@ export default function ProjectCostLedger({
         setCosts((current) => [created, ...current]);
       }
       resetForm();
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "费用保存失败。");
     } finally {
@@ -139,6 +148,7 @@ export default function ProjectCostLedger({
     try {
       const updated = await patchItem<CostItem>("costs", item.id, { status });
       setCosts((current) => current.map((entry) => (entry.id === item.id ? updated : entry)));
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "状态更新失败。");
     }
@@ -151,6 +161,7 @@ export default function ProjectCostLedger({
       await deleteItem("costs", item.id);
       setCosts((current) => current.filter((entry) => entry.id !== item.id));
       if (editingId === item.id) resetForm();
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "删除失败。");
     }
@@ -214,6 +225,18 @@ export default function ProjectCostLedger({
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           <p>{remaining < 0 ? `预计成本已超出预算 ${money(Math.abs(remaining))}，请调整费用或补充预算。` : `还有 ${money(committed - paid)} 已确认费用尚未支付，请核对付款节点与发票。`}</p>
         </div>
+      )}
+
+      {categoryTotals.length > 0 && (
+        <section className="mb-7 border-b border-line/70 pb-6" aria-labelledby="cost-structure-heading">
+          <div className="mb-4 flex items-end justify-between gap-3"><div><h3 id="cost-structure-heading" className="text-sm font-semibold text-ink">成本结构</h3><p className="mt-1 text-[11px] text-ink-soft">按费用分类查看预算占用</p></div><p className="text-[11px] text-ink-soft">共 {categoryTotals.length} 类</p></div>
+          <div className="grid gap-x-8 gap-y-4 md:grid-cols-2">
+            {categoryTotals.map((item) => {
+              const ratio = total > 0 ? item.amount / total * 100 : 0;
+              return <div key={item.category}><div className="mb-1.5 flex items-center justify-between gap-3 text-xs"><span className="font-medium text-ink">{item.category}</span><span className="text-ink-soft">{money(item.amount)} · {Math.round(ratio)}%</span></div><div className="h-1.5 overflow-hidden rounded-full bg-paper-soft"><div className="h-full rounded-full bg-accent" style={{ width: `${Math.max(ratio, 2)}%` }} /></div></div>;
+            })}
+          </div>
+        </section>
       )}
 
       {showForm && (

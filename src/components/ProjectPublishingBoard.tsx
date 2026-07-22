@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ArrowUpRight, CalendarClock, Copy, Files, Pencil, Plus, Trash2, X } from "lucide-react";
 import { createItem, deleteItem, patchItem } from "@/lib/clientData";
 import type { Deliverable, DeliverableStatus, ProjectAsset, PublishPlatform } from "@/lib/types";
@@ -30,10 +31,31 @@ function toLocalInput(value?: string) {
   return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
 }
 
+async function writeClipboard(text: string) {
+  try {
+    if (!navigator.clipboard) throw new Error("Clipboard API unavailable");
+    await navigator.clipboard.writeText(text);
+    return;
+  } catch {
+    const input = document.createElement("textarea");
+    input.value = text;
+    input.setAttribute("readonly", "");
+    input.style.position = "fixed";
+    input.style.opacity = "0";
+    document.body.appendChild(input);
+    input.select();
+    const copied = document.execCommand("copy");
+    input.remove();
+    if (!copied) throw new Error("Clipboard permission denied");
+  }
+}
+
 export default function ProjectPublishingBoard({ projectId, initialDeliverables, assets }: { projectId: string; initialDeliverables: Deliverable[]; assets: ProjectAsset[] }) {
+  const router = useRouter();
   const [items, setItems] = useState(initialDeliverables);
   const [showForm, setShowForm] = useState(initialDeliverables.length === 0);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<PublishForm>(emptyForm);
@@ -89,6 +111,7 @@ export default function ProjectPublishingBoard({ projectId, initialDeliverables,
         setItems((current) => [created, ...current]);
       }
       resetForm();
+      router.refresh();
     } catch (err) { setError(err instanceof Error ? err.message : "发布内容保存失败。"); }
     finally { setPending(false); }
   }
@@ -97,12 +120,23 @@ export default function ProjectPublishingBoard({ projectId, initialDeliverables,
     try {
       const updated = await patchItem<Deliverable>("deliverables", item.id, { status, publishedAt: status === "published" ? new Date().toISOString() : item.publishedAt });
       setItems((current) => current.map((entry) => entry.id === item.id ? updated : entry));
+      router.refresh();
     } catch (err) { setError(err instanceof Error ? err.message : "状态更新失败。"); }
+  }
+
+  async function copyCaption(item: Deliverable) {
+    try {
+      await writeClipboard(item.caption ?? "");
+      setCopiedId(item.id);
+      window.setTimeout(() => setCopiedId((current) => current === item.id ? null : current), 1600);
+    } catch {
+      setError("文案复制失败，请检查浏览器剪贴板权限。");
+    }
   }
 
   async function remove(item: Deliverable) {
     if (!window.confirm(`删除「${item.title}」的发布记录？`)) return;
-    try { await deleteItem("deliverables", item.id); setItems((current) => current.filter((entry) => entry.id !== item.id)); }
+    try { await deleteItem("deliverables", item.id); setItems((current) => current.filter((entry) => entry.id !== item.id)); router.refresh(); }
     catch (err) { setError(err instanceof Error ? err.message : "删除失败。"); }
   }
 
@@ -138,7 +172,7 @@ export default function ProjectPublishingBoard({ projectId, initialDeliverables,
               <div className="mt-3 flex flex-wrap gap-3 text-[11px] text-ink-soft">
                 {item.scheduledAt && <span className="inline-flex items-center gap-1"><CalendarClock className="h-3 w-3" />{new Date(item.scheduledAt).toLocaleString("zh-CN")}</span>}
                 {item.url && <a href={item.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-accent">打开成片<ArrowUpRight className="h-3 w-3" /></a>}
-                {item.caption && <button type="button" onClick={() => navigator.clipboard.writeText(item.caption ?? "")} className="inline-flex items-center gap-1 hover:text-accent"><Copy className="h-3 w-3" />复制文案</button>}
+                {item.caption && <button type="button" onClick={() => copyCaption(item)} className={`inline-flex items-center gap-1 ${copiedId === item.id ? "text-emerald-600" : "hover:text-accent"}`}><Copy className="h-3 w-3" />{copiedId === item.id ? "已复制" : "复制文案"}</button>}
               </div>
             </div>
             <select value={item.status} onChange={(e) => changeStatus(item, e.target.value as DeliverableStatus)} className="h-9 rounded-md border border-line bg-paper px-3 text-xs focus:border-accent focus:outline-none">{Object.entries(statusLabel).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>

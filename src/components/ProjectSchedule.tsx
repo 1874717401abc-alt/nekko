@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { CalendarDays, Edit3, Plus, Trash2 } from "lucide-react";
 import { createItem, deleteItem, patchItem } from "@/lib/clientData";
 import type { MilestoneStatus, ProgressTask, ProjectMilestone } from "@/lib/types";
@@ -55,6 +56,7 @@ export default function ProjectSchedule({
   initialMilestones: ProjectMilestone[];
   tasks: ProgressTask[];
 }) {
+  const router = useRouter();
   const [milestones, setMilestones] = useState(initialMilestones);
   const [form, setForm] = useState<MilestoneForm>(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -80,6 +82,16 @@ export default function ProjectSchedule({
     [milestones, tasks]
   );
   const unscheduledTasks = tasks.filter((task) => !task.dueDate && task.status !== "done");
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayKey = new Date(today.getTime() - today.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
+  const nextWeek = new Date(today);
+  nextWeek.setDate(nextWeek.getDate() + 7);
+  const nextWeekKey = new Date(nextWeek.getTime() - nextWeek.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
+  const openEvents = events.filter((event) => event.item.status !== "done");
+  const overdueCount = openEvents.filter((event) => event.date < todayKey).length;
+  const upcomingCount = openEvents.filter((event) => event.date >= todayKey && event.date <= nextWeekKey).length;
+  const completedMilestones = milestones.filter((item) => item.status === "done").length;
 
   function resetForm() {
     setForm(emptyForm);
@@ -114,6 +126,7 @@ export default function ProjectSchedule({
         setMilestones((current) => [...current, created]);
       }
       resetForm();
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "排期保存失败。");
     } finally {
@@ -126,6 +139,7 @@ export default function ProjectSchedule({
     try {
       const updated = await patchItem<ProjectMilestone>("milestones", item.id, { status });
       setMilestones((current) => current.map((entry) => (entry.id === item.id ? updated : entry)));
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "状态更新失败。");
     }
@@ -137,6 +151,7 @@ export default function ProjectSchedule({
       await deleteItem("milestones", item.id);
       setMilestones((current) => current.filter((entry) => entry.id !== item.id));
       if (editingId === item.id) resetForm();
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "删除失败。");
     }
@@ -167,6 +182,15 @@ export default function ProjectSchedule({
       </div>
 
       {error && <p className="mb-4 text-xs text-red-500">{error}</p>}
+
+      <div className="mb-7 grid grid-cols-2 border-y border-line/70 sm:grid-cols-4">
+        {[
+          ["未来 7 天", upcomingCount, upcomingCount > 0 ? "text-accent" : "text-ink"],
+          ["已逾期", overdueCount, overdueCount > 0 ? "text-red-500" : "text-ink"],
+          ["未排期任务", unscheduledTasks.length, unscheduledTasks.length > 0 ? "text-amber-600" : "text-ink"],
+          ["已完成节点", `${completedMilestones}/${milestones.length}`, "text-ink"],
+        ].map(([label, value, color], index) => <div key={label} className={`px-3 py-4 ${index % 2 ? "border-l border-line/70" : ""} ${index > 1 ? "border-t border-line/70 sm:border-t-0" : ""} ${index > 0 ? "sm:border-l sm:border-line/70" : ""}`}><p className="text-[11px] text-ink-soft">{label}</p><p className={`mt-1 text-lg font-semibold ${color}`}>{value}</p></div>)}
+      </div>
 
       {showForm && (
         <form onSubmit={saveMilestone} className="mb-7 grid grid-cols-1 gap-3 border-b border-line pb-7 sm:grid-cols-2 lg:grid-cols-4">

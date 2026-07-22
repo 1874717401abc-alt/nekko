@@ -5,16 +5,19 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
+  AlertTriangle,
   CalendarDays,
   BarChart3,
   CheckCircle2,
   Clock3,
+  Download,
   Edit3,
   FolderOpen,
   LayoutDashboard,
   Plus,
   ScrollText,
   Send,
+  ShieldCheck,
   Trash2,
   WalletCards,
 } from "lucide-react";
@@ -35,6 +38,7 @@ import type {
   Project,
   ProjectAsset,
   ProjectMilestone,
+  ProjectStage,
   ProgressTask,
   ScriptScene,
   ScriptReview,
@@ -94,6 +98,18 @@ const tabs: { value: ProjectTab; label: string; icon: typeof LayoutDashboard }[]
   { value: "analytics", label: "复盘", icon: BarChart3 },
 ];
 
+const projectStageLabel: Record<ProjectStage, string> = {
+  idea: "选题",
+  research: "调研",
+  script: "脚本",
+  shooting: "拍摄",
+  editing: "剪辑",
+  review: "审核",
+  publishing: "发布",
+  published: "已发布",
+  retrospective: "复盘",
+};
+
 export default function ProjectDetail({
   project,
   inspiration,
@@ -142,6 +158,7 @@ export default function ProjectDetail({
   const [quickDueDate, setQuickDueDate] = useState("");
   const [quickTags, setQuickTags] = useState("");
   const [quickSaving, setQuickSaving] = useState(false);
+  const [briefStatus, setBriefStatus] = useState("导出简报");
 
   const myInspiration = inspiration.filter((item) => item.projectId === project.id);
   const myLibrary = library.filter((item) => item.projectId === project.id);
@@ -160,6 +177,21 @@ export default function ProjectDetail({
   const nextMilestone = [...myMilestones]
     .filter((item) => item.status !== "done")
     .sort((a, b) => a.date.localeCompare(b.date))[0];
+  const today = new Date();
+  const todayKey = new Date(today.getTime() - today.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
+  const overdueTasks = myProgress.filter((item) => item.status !== "done" && item.dueDate && item.dueDate < todayKey);
+  const overdueMilestones = myMilestones.filter((item) => item.status !== "done" && item.date < todayKey);
+  const openReviews = myScriptReviews.filter((item) => !item.resolved);
+  const overduePublishing = myDeliverables.filter((item) => item.status === "scheduled" && item.scheduledAt && new Date(item.scheduledAt).getTime() < today.getTime());
+  const overBudget = (project.budget ?? 0) > 0 && totalCost > (project.budget ?? 0);
+  const projectRisks: { key: string; title: string; detail: string; tab: ProjectTab }[] = [
+    ...(project.blockedReason ? [{ key: "blocked", title: "制作流程被阻塞", detail: project.blockedReason, tab: "overview" as ProjectTab }] : []),
+    ...(overdueTasks.length ? [{ key: "tasks", title: `${overdueTasks.length} 个任务已逾期`, detail: overdueTasks.slice(0, 2).map((item) => item.title).join("、"), tab: "schedule" as ProjectTab }] : []),
+    ...(overdueMilestones.length ? [{ key: "milestones", title: `${overdueMilestones.length} 个里程碑已逾期`, detail: overdueMilestones.slice(0, 2).map((item) => item.title).join("、"), tab: "schedule" as ProjectTab }] : []),
+    ...(openReviews.length ? [{ key: "reviews", title: `${openReviews.length} 条脚本意见待处理`, detail: "完成审阅后再锁定拍摄版本", tab: "script" as ProjectTab }] : []),
+    ...(overBudget ? [{ key: "budget", title: "预计成本超过预算", detail: `已超出 ${formatMoney(totalCost - (project.budget ?? 0))}`, tab: "costs" as ProjectTab }] : []),
+    ...(overduePublishing.length ? [{ key: "publishing", title: `${overduePublishing.length} 条内容超过计划发布时间`, detail: overduePublishing.slice(0, 2).map((item) => item.title).join("、"), tab: "publish" as ProjectTab }] : []),
+  ];
 
   useEffect(() => {
     const nav = tabNavRef.current;
@@ -167,6 +199,61 @@ export default function ProjectDetail({
     if (!nav || !tab) return;
     nav.scrollTo({ left: tab.offsetLeft - (nav.clientWidth - tab.offsetWidth) / 2, behavior: "smooth" });
   }, [activeTab]);
+
+  function selectTab(tab: ProjectTab) {
+    setActiveTab(tab);
+    router.replace(
+      tab === "overview" ? `/projects/${project.id}` : `/projects/${project.id}?tab=${tab}`,
+      { scroll: false }
+    );
+  }
+
+  function exportProjectBrief() {
+    const performanceTotals = myPerformance.reduce((sum, item) => ({ views: sum.views + item.views, followers: sum.followers + item.followers, revenue: sum.revenue + item.revenue }), { views: 0, followers: 0, revenue: 0 });
+    const lines = [
+      `# ${project.name} · 项目简报`,
+      "",
+      project.description ?? "",
+      "",
+      "## 项目概况",
+      `- 制作阶段：${projectStageLabel[project.stage ?? "idea"]}`,
+      `- 阶段负责人：${project.stageOwner || "未指定"}`,
+      `- 任务进度：${completedTasks} / ${myProgress.length}`,
+      `- 脚本时长：${formatDuration(totalRuntime)}`,
+      `- 预算 / 预计成本：${formatMoney(project.budget ?? 0)} / ${formatMoney(totalCost)}`,
+      `- 项目风险：${projectRisks.length ? projectRisks.map((item) => item.title).join("；") : "当前无明确风险"}`,
+      "",
+      "## 当前任务",
+      ...([...myProgress].filter((item) => item.status !== "done").sort((a, b) => String(a.dueDate ?? "9999").localeCompare(String(b.dueDate ?? "9999"))).map((item) => `- [${item.status === "doing" ? "进行中" : "待开始"}] ${item.title}｜${item.assignee || "未指定"}｜${item.dueDate || "未排期"}`)),
+      ...(myProgress.every((item) => item.status === "done") ? ["- 暂无未完成任务"] : []),
+      "",
+      "## 关键排期",
+      ...([...myMilestones].sort((a, b) => a.date.localeCompare(b.date)).map((item) => `- ${item.date}｜${item.title}｜${item.status === "done" ? "已完成" : item.status === "doing" ? "进行中" : "待开始"}${item.assignee ? `｜${item.assignee}` : ""}`)),
+      ...(myMilestones.length === 0 ? ["- 暂无里程碑"] : []),
+      "",
+      "## 成本台账",
+      ...([...myCosts].sort((a, b) => String(b.date ?? "").localeCompare(String(a.date ?? ""))).map((item) => `- ${item.title}｜${item.category}｜${formatMoney(item.amount)}｜${item.status === "paid" ? "已支付" : item.status === "approved" ? "已确认" : "计划中"}`)),
+      ...(myCosts.length === 0 ? ["- 暂无成本记录"] : []),
+      "",
+      "## 发布与结果",
+      ...myDeliverables.map((item) => `- ${item.title}｜${item.platform}｜${item.status === "published" ? "已发布" : item.status === "scheduled" ? "已排期" : "草稿"}`),
+      ...(myDeliverables.length === 0 ? ["- 暂无发布版本"] : []),
+      `- 累计播放：${performanceTotals.views.toLocaleString("zh-CN")}`,
+      `- 累计涨粉：${performanceTotals.followers.toLocaleString("zh-CN")}`,
+      `- 记录收入：${formatMoney(performanceTotals.revenue)}`,
+      "",
+      `生成时间：${new Date().toLocaleString("zh-CN")}`,
+    ].filter((line, index, all) => line !== "" || all[index - 1] !== "");
+    const blob = new Blob([`\uFEFF${lines.join("\n")}`], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `${project.name.replace(/[\\/:*?"<>|]/g, "-")}-项目简报-${todayKey}.md`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    setBriefStatus("已导出");
+    window.setTimeout(() => setBriefStatus("导出简报"), 1800);
+  }
 
   async function handleSave(event: React.FormEvent) {
     event.preventDefault();
@@ -284,7 +371,8 @@ export default function ProjectDetail({
           </div>
         )}
         {!editing && (
-          <div className="flex shrink-0 gap-2">
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <button type="button" onClick={exportProjectBrief} className="inline-flex h-9 items-center gap-2 rounded-md border border-line px-3 text-xs text-ink-soft hover:border-accent hover:text-accent"><Download className="h-3.5 w-3.5" aria-hidden="true" />{briefStatus}</button>
             <button type="button" onClick={() => setEditing(true)} className="inline-flex h-9 items-center gap-2 rounded-md border border-line px-3 text-xs text-ink-soft hover:border-accent hover:text-accent"><Edit3 className="h-3.5 w-3.5" aria-hidden="true" />编辑</button>
             <button type="button" onClick={handleDelete} disabled={saving} title="删除项目" aria-label="删除项目" className="flex h-9 w-9 items-center justify-center rounded-md border border-line text-ink-soft hover:border-red-400 hover:text-red-500"><Trash2 className="h-3.5 w-3.5" aria-hidden="true" /></button>
           </div>
@@ -301,15 +389,7 @@ export default function ProjectDetail({
                 ref={active ? activeTabRef : undefined}
                 key={tab.value}
                 type="button"
-                onClick={() => {
-                  setActiveTab(tab.value);
-                  router.replace(
-                    tab.value === "overview"
-                      ? `/projects/${project.id}`
-                      : `/projects/${project.id}?tab=${tab.value}`,
-                    { scroll: false }
-                  );
-                }}
+                onClick={() => selectTab(tab.value)}
                 className={`relative flex h-11 items-center gap-2 px-3 text-xs font-medium transition-colors ${active ? "text-ink" : "text-ink-soft hover:text-ink"}`}
               >
                 <Icon className={`h-4 w-4 ${active ? "text-accent" : ""}`} aria-hidden="true" />
@@ -324,6 +404,27 @@ export default function ProjectDetail({
       {activeTab === "overview" && (
         <div>
           <ProjectPipeline project={project} />
+          <section className="mb-8 border-y border-line/70 py-5" aria-labelledby="risk-heading">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <h2 id="risk-heading" className="text-sm font-semibold text-ink">项目风险</h2>
+                <p className="mt-1 text-xs text-ink-soft">从任务、排期、审阅、预算和发布计划自动检查。</p>
+              </div>
+              <span className={`rounded px-2 py-1 text-[10px] font-medium ${projectRisks.length ? "bg-amber-500/10 text-amber-700" : "bg-emerald-500/10 text-emerald-700"}`}>{projectRisks.length ? `${projectRisks.length} 项待处理` : "状态正常"}</span>
+            </div>
+            {projectRisks.length ? (
+              <div className="grid gap-x-8 gap-y-1 md:grid-cols-2">
+                {projectRisks.map((risk) => (
+                  <button key={risk.key} type="button" onClick={() => selectTab(risk.tab)} className="group flex min-w-0 items-start gap-3 border-t border-line/60 py-3 text-left first:border-t-0 md:[&:nth-child(2)]:border-t-0">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                    <span className="min-w-0"><span className="block text-xs font-medium text-ink group-hover:text-accent">{risk.title}</span><span className="mt-1 block truncate text-[11px] text-ink-soft">{risk.detail}</span></span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 border-t border-line/60 pt-4 text-xs text-emerald-700"><ShieldCheck className="h-4 w-4" /><p>当前没有逾期、超支、待审或错过发布时间的问题。</p></div>
+            )}
+          </section>
           <div className="mb-8 grid grid-cols-2 border-y border-line/70 lg:grid-cols-4">
             <div className="py-5 pr-4">
               <p className="flex items-center gap-2 text-[11px] text-ink-soft"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />任务完成</p>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { AlertTriangle, ArrowRight, Check } from "lucide-react";
 import { patchItem } from "@/lib/clientData";
 import type { Project, ProjectStage } from "@/lib/types";
@@ -18,6 +19,7 @@ const stages: { value: ProjectStage; label: string }[] = [
 ];
 
 export default function ProjectPipeline({ project }: { project: Project }) {
+  const router = useRouter();
   const [stage, setStage] = useState<ProjectStage>(project.stage ?? "idea");
   const [owner, setOwner] = useState(project.stageOwner ?? "");
   const [blockedReason, setBlockedReason] = useState(project.blockedReason ?? "");
@@ -37,6 +39,7 @@ export default function ProjectPipeline({ project }: { project: Project }) {
       });
       setStage(updated.stage ?? nextStage);
       setEditing(false);
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "制作阶段保存失败。");
     } finally {

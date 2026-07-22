@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { BarChart3, Plus, Trash2 } from "lucide-react";
 import { createItem, deleteItem } from "@/lib/clientData";
 import type { CostItem, Deliverable, PerformanceRecord, PublishPlatform } from "@/lib/types";
@@ -10,6 +11,7 @@ const platformLabel: Record<PublishPlatform, string> = { bilibili: "B站", xiaoh
 function number(value: number) { return new Intl.NumberFormat("zh-CN", { maximumFractionDigits: 1 }).format(value); }
 
 export default function ProjectAnalytics({ projectId, initialRecords, deliverables, costs }: { projectId: string; initialRecords: PerformanceRecord[]; deliverables: Deliverable[]; costs: CostItem[] }) {
+  const router = useRouter();
   const [records, setRecords] = useState(initialRecords);
   const [showForm, setShowForm] = useState(initialRecords.length === 0);
   const [pending, setPending] = useState(false);
@@ -61,12 +63,12 @@ export default function ProjectAnalytics({ projectId, initialRecords, deliverabl
     try {
       const payload = Object.fromEntries(Object.entries(form).map(([key, value]) => metricFields.some(([name]) => name === key) ? [key, Number(value) || 0] : [key, value]));
       const created = await createItem<PerformanceRecord>("performance", { projectId, ...payload });
-      setRecords((current) => [created, ...current]); setShowForm(false);
+      setRecords((current) => [created, ...current]); setShowForm(false); router.refresh();
     } catch (err) { setError(err instanceof Error ? err.message : "数据保存失败。"); }
     finally { setPending(false); }
   }
 
-  async function remove(item: PerformanceRecord) { if (!window.confirm("删除这条复盘数据？")) return; try { await deleteItem("performance", item.id); setRecords((current) => current.filter((entry) => entry.id !== item.id)); } catch (err) { setError(err instanceof Error ? err.message : "删除失败。"); } }
+  async function remove(item: PerformanceRecord) { if (!window.confirm("删除这条复盘数据？")) return; try { await deleteItem("performance", item.id); setRecords((current) => current.filter((entry) => entry.id !== item.id)); router.refresh(); } catch (err) { setError(err instanceof Error ? err.message : "删除失败。"); } }
 
   return (
     <section aria-labelledby="analytics-heading">

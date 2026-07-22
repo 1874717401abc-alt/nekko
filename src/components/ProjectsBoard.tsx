@@ -1,14 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Plus, Search, Trash2 } from "lucide-react";
+import { Plus, Search, Trash2, X } from "lucide-react";
 import { createItem, deleteItem } from "@/lib/clientData";
 import type { CostItem, InspirationItem, LibraryItem, Project, ProjectMilestone, ProjectStage, ProjectTemplate, ProgressTask, ScriptScene } from "@/lib/types";
 
 const easeOut = [0.22, 1, 0.36, 1] as const;
+const FILTER_STORAGE_KEY = "nekko-project-filters";
 const stages: { value: ProjectStage; label: string }[] = [
   { value: "idea", label: "选题" }, { value: "research", label: "调研" },
   { value: "script", label: "脚本" }, { value: "shooting", label: "拍摄" },
@@ -67,12 +68,44 @@ export default function ProjectsBoard({
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [stageFilter, setStageFilter] = useState<ProjectStage | "all">("all");
+  const [filtersReady, setFiltersReady] = useState(false);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState("");
   const [budget, setBudget] = useState("");
   const [template, setTemplate] = useState<ProjectTemplate>("blank");
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      try {
+        const stored = JSON.parse(window.sessionStorage.getItem(FILTER_STORAGE_KEY) ?? "null") as { keyword?: string; dateFrom?: string; dateTo?: string; stageFilter?: ProjectStage | "all" } | null;
+        if (stored) {
+          const storedStage = stored.stageFilter;
+          setKeyword(stored.keyword ?? "");
+          setDateFrom(stored.dateFrom ?? "");
+          setDateTo(stored.dateTo ?? "");
+          setStageFilter(storedStage && (storedStage === "all" || stages.some((stage) => stage.value === storedStage)) ? storedStage : "all");
+        }
+      } catch {
+        window.sessionStorage.removeItem(FILTER_STORAGE_KEY);
+      }
+      setFiltersReady(true);
+    }, 0);
+    return () => window.clearTimeout(timeout);
+  }, []);
+
+  useEffect(() => {
+    if (!filtersReady) return;
+    window.sessionStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify({ keyword, dateFrom, dateTo, stageFilter }));
+  }, [dateFrom, dateTo, filtersReady, keyword, stageFilter]);
+
+  function clearFilters() {
+    setKeyword("");
+    setDateFrom("");
+    setDateTo("");
+    setStageFilter("all");
+  }
 
   function resetForm() {
     setName("");
@@ -213,6 +246,7 @@ export default function ProjectsBoard({
             const count = projects.filter((project) => (project.stage ?? "idea") === stage.value).length;
             return <button key={stage.value} type="button" onClick={() => setStageFilter(stage.value)} className={`rounded-md px-3 py-1.5 text-xs ${stageFilter === stage.value ? "bg-ink text-paper" : "text-ink-soft hover:bg-paper-soft hover:text-ink"}`}>{stage.label} {count}</button>;
           })}
+          {(keyword || dateFrom || dateTo || stageFilter !== "all") && <button type="button" onClick={clearFilters} className="ml-2 inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs text-ink-soft hover:bg-paper-soft hover:text-ink"><X className="h-3.5 w-3.5" />清除筛选</button>}
         </div>
       </div>
 
