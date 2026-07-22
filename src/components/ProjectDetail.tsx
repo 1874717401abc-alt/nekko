@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -125,6 +125,8 @@ export default function ProjectDetail({
 }) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<ProjectTab>(initialTab);
+  const tabNavRef = useRef<HTMLElement>(null);
+  const activeTabRef = useRef<HTMLButtonElement>(null);
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(project.name);
   const [description, setDescription] = useState(project.description ?? "");
@@ -158,6 +160,13 @@ export default function ProjectDetail({
   const nextMilestone = [...myMilestones]
     .filter((item) => item.status !== "done")
     .sort((a, b) => a.date.localeCompare(b.date))[0];
+
+  useEffect(() => {
+    const nav = tabNavRef.current;
+    const tab = activeTabRef.current;
+    if (!nav || !tab) return;
+    nav.scrollTo({ left: tab.offsetLeft - (nav.clientWidth - tab.offsetWidth) / 2, behavior: "smooth" });
+  }, [activeTab]);
 
   async function handleSave(event: React.FormEvent) {
     event.preventDefault();
@@ -282,13 +291,14 @@ export default function ProjectDetail({
         )}
       </header>
 
-      <nav className="mb-7 overflow-x-auto border-b border-line" aria-label="项目模块">
+      <nav ref={tabNavRef} className="mb-7 overflow-x-auto border-b border-line" aria-label="项目模块">
         <div className="flex min-w-max gap-1">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const active = activeTab === tab.value;
             return (
               <button
+                ref={active ? activeTabRef : undefined}
                 key={tab.value}
                 type="button"
                 onClick={() => {
@@ -396,7 +406,7 @@ export default function ProjectDetail({
       {activeTab === "costs" && <ProjectCostLedger project={project} initialCosts={myCosts} />}
       {activeTab === "schedule" && <ProjectSchedule projectId={project.id} initialMilestones={myMilestones} tasks={myProgress} />}
       {activeTab === "assets" && <ProjectAssets projectId={project.id} initialAssets={myAssets} inspiration={myInspiration} library={myLibrary} />}
-      {activeTab === "publish" && <ProjectPublishingBoard projectId={project.id} initialDeliverables={myDeliverables} />}
+      {activeTab === "publish" && <ProjectPublishingBoard projectId={project.id} initialDeliverables={myDeliverables} assets={myAssets} />}
       {activeTab === "analytics" && <ProjectAnalytics projectId={project.id} initialRecords={myPerformance} deliverables={myDeliverables} costs={myCosts} />}
     </motion.div>
   );

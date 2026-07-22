@@ -6,9 +6,16 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Plus, Search, Trash2 } from "lucide-react";
 import { createItem, deleteItem } from "@/lib/clientData";
-import type { CostItem, InspirationItem, LibraryItem, Project, ProjectMilestone, ProjectTemplate, ProgressTask, ScriptScene } from "@/lib/types";
+import type { CostItem, InspirationItem, LibraryItem, Project, ProjectMilestone, ProjectStage, ProjectTemplate, ProgressTask, ScriptScene } from "@/lib/types";
 
 const easeOut = [0.22, 1, 0.36, 1] as const;
+const stages: { value: ProjectStage; label: string }[] = [
+  { value: "idea", label: "选题" }, { value: "research", label: "调研" },
+  { value: "script", label: "脚本" }, { value: "shooting", label: "拍摄" },
+  { value: "editing", label: "剪辑" }, { value: "review", label: "审核" },
+  { value: "publishing", label: "发布" }, { value: "published", label: "已发布" },
+  { value: "retrospective", label: "复盘" },
+];
 
 const templates: { value: ProjectTemplate; label: string; description: string; scenes: { title: string; type: ScriptScene["type"]; duration: number }[]; milestones: string[] }[] = [
   { value: "blank", label: "空白", description: "只创建项目", scenes: [], milestones: [] },
@@ -59,6 +66,7 @@ export default function ProjectsBoard({
   const [keyword, setKeyword] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [stageFilter, setStageFilter] = useState<ProjectStage | "all">("all");
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -127,6 +135,7 @@ export default function ProjectsBoard({
   }
 
   const filtered = projects.filter((p) => {
+    if (stageFilter !== "all" && (p.stage ?? "idea") !== stageFilter) return false;
     if (keyword.trim()) {
       const kw = keyword.trim().toLowerCase();
       const haystack = [p.name, p.description ?? "", ...p.tags].join(" ").toLowerCase();
@@ -195,6 +204,16 @@ export default function ProjectsBoard({
           <Plus className={`h-4 w-4 ${showForm ? "rotate-45" : ""}`} />
           {showForm ? "取消" : "新建项目"}
         </button>
+      </div>
+
+      <div className="mb-6 overflow-x-auto border-b border-line/70 pb-3">
+        <div className="flex min-w-max gap-1">
+          <button type="button" onClick={() => setStageFilter("all")} className={`rounded-md px-3 py-1.5 text-xs ${stageFilter === "all" ? "bg-ink text-paper" : "text-ink-soft hover:bg-paper-soft hover:text-ink"}`}>全部 {projects.length}</button>
+          {stages.map((stage) => {
+            const count = projects.filter((project) => (project.stage ?? "idea") === stage.value).length;
+            return <button key={stage.value} type="button" onClick={() => setStageFilter(stage.value)} className={`rounded-md px-3 py-1.5 text-xs ${stageFilter === stage.value ? "bg-ink text-paper" : "text-ink-soft hover:bg-paper-soft hover:text-ink"}`}>{stage.label} {count}</button>;
+          })}
+        </div>
       </div>
 
       <AnimatePresence initial={false}>
@@ -277,6 +296,9 @@ export default function ProjectsBoard({
         <AnimatePresence initial={false}>
           {sorted.map((project) => {
             const c = counts(project.id);
+            const stageIndex = stages.findIndex((item) => item.value === (project.stage ?? "idea"));
+            const stage = stages[Math.max(0, stageIndex)];
+            const progressPercent = ((Math.max(0, stageIndex) + 1) / stages.length) * 100;
             return (
               <motion.div
                 key={project.id}
@@ -304,6 +326,12 @@ export default function ProjectsBoard({
                     {pendingId === project.id ? <span className="text-[10px]">...</span> : <Trash2 className="h-3.5 w-3.5" />}
                   </button>
                 </div>
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <span className="rounded bg-accent/10 px-2 py-0.5 text-[10px] font-medium text-accent">{stage.label}</span>
+                  <span className="truncate text-[10px] text-ink-soft">{project.stageOwner || "未指定负责人"}</span>
+                </div>
+                <div className="mb-3 h-1 overflow-hidden rounded-full bg-paper-soft"><div className="h-full bg-accent" style={{ width: `${progressPercent}%` }} /></div>
+                {project.blockedReason && <p className="mb-3 line-clamp-2 border-l-2 border-amber-500 pl-2 text-[11px] leading-4 text-amber-700">{project.blockedReason}</p>}
                 {project.description && (
                   <p className="text-sm text-ink-soft leading-relaxed line-clamp-3 mb-3">
                     {project.description}
