@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Check, Edit3, Plus, Trash2, WalletCards } from "lucide-react";
+import { AlertTriangle, Check, Edit3, Plus, Trash2, WalletCards } from "lucide-react";
 import { createItem, deleteItem, patchItem } from "@/lib/clientData";
 import type { CostItem, CostStatus, Project } from "@/lib/types";
 
@@ -208,6 +208,13 @@ export default function ProjectCostLedger({
           <p className={`mt-1 text-lg font-semibold ${remaining < 0 ? "text-red-500" : "text-emerald-600"}`}>{money(remaining)}</p>
         </div>
       </div>
+
+      {(remaining < 0 || committed > paid) && (
+        <div className={`mb-6 flex items-start gap-3 border-l-2 px-4 py-3 text-xs leading-5 ${remaining < 0 ? "border-red-500 bg-red-500/5 text-red-600" : "border-amber-500 bg-amber-500/5 text-amber-700"}`}>
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <p>{remaining < 0 ? `预计成本已超出预算 ${money(Math.abs(remaining))}，请调整费用或补充预算。` : `还有 ${money(committed - paid)} 已确认费用尚未支付，请核对付款节点与发票。`}</p>
+        </div>
+      )}
 
       {showForm && (
         <form onSubmit={saveCost} className="mb-7 grid grid-cols-1 gap-3 border-b border-line pb-7 sm:grid-cols-2 lg:grid-cols-4">

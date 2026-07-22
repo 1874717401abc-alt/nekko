@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   CalendarDays,
+  BarChart3,
   CheckCircle2,
   Clock3,
   Edit3,
@@ -13,22 +14,32 @@ import {
   LayoutDashboard,
   Plus,
   ScrollText,
+  Send,
   Trash2,
   WalletCards,
 } from "lucide-react";
 import ProjectAssets from "@/components/ProjectAssets";
 import ProjectCostLedger from "@/components/ProjectCostLedger";
+import ProjectAnalytics from "@/components/ProjectAnalytics";
+import ProjectPipeline from "@/components/ProjectPipeline";
+import ProjectPublishingBoard from "@/components/ProjectPublishingBoard";
 import ProjectSchedule from "@/components/ProjectSchedule";
 import ProjectScriptBoard from "@/components/ProjectScriptBoard";
+import ProjectScriptReview from "@/components/ProjectScriptReview";
 import { createItem, deleteItem, patchItem } from "@/lib/clientData";
 import type {
   CostItem,
+  Deliverable,
   InspirationItem,
   LibraryItem,
   Project,
+  ProjectAsset,
   ProjectMilestone,
   ProgressTask,
   ScriptScene,
+  ScriptReview,
+  ScriptVersion,
+  PerformanceRecord,
   TaskPriority,
   TaskStatus,
 } from "@/lib/types";
@@ -71,7 +82,7 @@ function formatMoney(value: number) {
 }
 
 type QuickKind = "task" | "library" | "inspiration";
-type ProjectTab = "overview" | "script" | "costs" | "schedule" | "assets";
+type ProjectTab = "overview" | "script" | "costs" | "schedule" | "assets" | "publish" | "analytics";
 
 const tabs: { value: ProjectTab; label: string; icon: typeof LayoutDashboard }[] = [
   { value: "overview", label: "总览", icon: LayoutDashboard },
@@ -79,6 +90,8 @@ const tabs: { value: ProjectTab; label: string; icon: typeof LayoutDashboard }[]
   { value: "costs", label: "成本", icon: WalletCards },
   { value: "schedule", label: "排期", icon: CalendarDays },
   { value: "assets", label: "素材", icon: FolderOpen },
+  { value: "publish", label: "发布", icon: Send },
+  { value: "analytics", label: "复盘", icon: BarChart3 },
 ];
 
 export default function ProjectDetail({
@@ -89,6 +102,11 @@ export default function ProjectDetail({
   scripts,
   costs,
   milestones,
+  scriptVersions,
+  scriptReviews,
+  assets,
+  deliverables,
+  performance,
   initialTab = "overview",
 }: {
   project: Project;
@@ -98,6 +116,11 @@ export default function ProjectDetail({
   scripts: ScriptScene[];
   costs: CostItem[];
   milestones: ProjectMilestone[];
+  scriptVersions: ScriptVersion[];
+  scriptReviews: ScriptReview[];
+  assets: ProjectAsset[];
+  deliverables: Deliverable[];
+  performance: PerformanceRecord[];
   initialTab?: ProjectTab;
 }) {
   const router = useRouter();
@@ -124,6 +147,11 @@ export default function ProjectDetail({
   const myScripts = scripts.filter((item) => item.projectId === project.id);
   const myCosts = costs.filter((item) => item.projectId === project.id);
   const myMilestones = milestones.filter((item) => item.projectId === project.id);
+  const myScriptVersions = scriptVersions.filter((item) => item.projectId === project.id);
+  const myScriptReviews = scriptReviews.filter((item) => item.projectId === project.id);
+  const myAssets = assets.filter((item) => item.projectId === project.id);
+  const myDeliverables = deliverables.filter((item) => item.projectId === project.id);
+  const myPerformance = performance.filter((item) => item.projectId === project.id);
   const completedTasks = myProgress.filter((task) => task.status === "done").length;
   const totalRuntime = myScripts.reduce((sum, scene) => sum + scene.duration, 0);
   const totalCost = myCosts.reduce((sum, item) => sum + item.amount, 0);
@@ -285,6 +313,7 @@ export default function ProjectDetail({
 
       {activeTab === "overview" && (
         <div>
+          <ProjectPipeline project={project} />
           <div className="mb-8 grid grid-cols-2 border-y border-line/70 lg:grid-cols-4">
             <div className="py-5 pr-4">
               <p className="flex items-center gap-2 text-[11px] text-ink-soft"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />任务完成</p>
@@ -363,10 +392,12 @@ export default function ProjectDetail({
         </div>
       )}
 
-      {activeTab === "script" && <ProjectScriptBoard projectId={project.id} initialScenes={myScripts} />}
+      {activeTab === "script" && <><ProjectScriptBoard projectId={project.id} initialScenes={myScripts} /><ProjectScriptReview projectId={project.id} scenes={myScripts} initialVersions={myScriptVersions} initialReviews={myScriptReviews} /></>}
       {activeTab === "costs" && <ProjectCostLedger project={project} initialCosts={myCosts} />}
       {activeTab === "schedule" && <ProjectSchedule projectId={project.id} initialMilestones={myMilestones} tasks={myProgress} />}
-      {activeTab === "assets" && <ProjectAssets inspiration={myInspiration} library={myLibrary} />}
+      {activeTab === "assets" && <ProjectAssets projectId={project.id} initialAssets={myAssets} inspiration={myInspiration} library={myLibrary} />}
+      {activeTab === "publish" && <ProjectPublishingBoard projectId={project.id} initialDeliverables={myDeliverables} />}
+      {activeTab === "analytics" && <ProjectAnalytics projectId={project.id} initialRecords={myPerformance} deliverables={myDeliverables} costs={myCosts} />}
     </motion.div>
   );
 }

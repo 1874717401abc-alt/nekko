@@ -12,6 +12,13 @@ const resourceLabels: Record<string, string> = {
   scripts: "脚本镜头",
   costs: "成本",
   milestones: "里程碑",
+  scriptVersions: "脚本版本",
+  scriptReviews: "脚本审阅",
+  assets: "项目素材",
+  deliverables: "发布内容",
+  performance: "复盘数据",
+  automations: "自动化",
+  notifications: "通知",
   checkins: "打卡",
 };
 

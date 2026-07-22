@@ -4,15 +4,22 @@ import { listAllDataItems, listTrashItems, readData } from "@/lib/store";
 import { listUsers } from "@/lib/users";
 import type {
   ActivityEvent,
+  AutomationRule,
   CheckIn,
   CostItem,
+  Deliverable,
   HeroContent,
   InspirationItem,
   LibraryItem,
+  NotificationItem,
+  PerformanceRecord,
   ProgressTask,
   Project,
+  ProjectAsset,
   ProjectMilestone,
   ScriptScene,
+  ScriptReview,
+  ScriptVersion,
 } from "@/lib/types";
 
 export async function GET() {
@@ -42,6 +49,13 @@ export async function GET() {
       scripts: listAllDataItems<ScriptScene>("scripts"),
       costs: listAllDataItems<CostItem>("costs"),
       milestones: listAllDataItems<ProjectMilestone>("milestones"),
+      scriptVersions: listAllDataItems<ScriptVersion>("scriptVersions"),
+      scriptReviews: listAllDataItems<ScriptReview>("scriptReviews"),
+      assets: listAllDataItems<ProjectAsset>("assets"),
+      deliverables: listAllDataItems<Deliverable>("deliverables"),
+      performance: listAllDataItems<PerformanceRecord>("performance"),
+      automations: listAllDataItems<AutomationRule>("automations"),
+      notifications: listAllDataItems<NotificationItem>("notifications"),
       checkins: listAllDataItems<CheckIn>("checkins"),
       activity,
       heroImages,

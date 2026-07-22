@@ -2,13 +2,14 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
   ArrowRight,
+  Bell,
   Bot,
   CalendarClock,
   CheckCircle2,
   Clock3,
-  FolderOpen,
   Lightbulb,
   ListTodo,
+  Send,
   Users,
 } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
@@ -23,7 +24,11 @@ import type {
   HeroContent,
   InspirationItem,
   LibraryItem,
+  Deliverable,
+  NotificationItem,
   ProgressTask,
+  Project,
+  ProjectMilestone,
 } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -83,6 +88,10 @@ export default async function Dashboard() {
     heroImages,
     heroContentRaw,
     activity,
+    projects,
+    milestones,
+    deliverables,
+    notifications,
   ] = await Promise.all([
     getCurrentUser(),
     isGuest(),
@@ -94,6 +103,10 @@ export default async function Dashboard() {
     readData<string[]>("hero"),
     readData<Partial<HeroContent>>("heroContent"),
     readData<ActivityEvent[]>("activity"),
+    readData<Project[]>("projects"),
+    readData<ProjectMilestone[]>("milestones"),
+    readData<Deliverable[]>("deliverables"),
+    readData<NotificationItem[]>("notifications"),
   ]);
 
   if (!currentUser && !guest) {
@@ -111,6 +124,11 @@ export default async function Dashboard() {
   const checkedInToday = members.filter((member) =>
     checkins.some((entry) => entry.userId === member.id && entry.date === todayKey())
   ).length;
+  const projectMap = new Map(projects.map((project) => [project.id, project.name]));
+  const todayTasks = tasks.filter((task) => task.status !== "done" && task.dueDate && task.dueDate <= todayKey());
+  const nearMilestones = milestones.filter((item) => item.status !== "done" && item.date >= todayKey()).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 4);
+  const nextPublishes = deliverables.filter((item) => item.status === "scheduled" && item.scheduledAt && item.scheduledAt.slice(0, 10) >= todayKey()).sort((a, b) => String(a.scheduledAt).localeCompare(String(b.scheduledAt))).slice(0, 4);
+  const unreadNotifications = notifications.filter((item) => !item.readAt && (!item.userId || item.userId === currentUser?.id));
 
   const recentInspiration = [...inspiration]
     .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
@@ -141,7 +159,7 @@ export default async function Dashboard() {
     { label: "逾期任务", value: overdue.length, detail: overdue.length > 0 ? "需要优先处理" : "当前无逾期", href: "/progress", icon: CalendarClock },
     { label: "今日到岗", value: `${checkedInToday}/${members.length}`, detail: "团队打卡", href: "/checkin", icon: Users },
     { label: "灵感库", value: inspiration.length, detail: "可用创作线索", href: "/inspiration", icon: Lightbulb },
-    { label: "资料库", value: library.length, detail: "已归档资料", href: "/library", icon: FolderOpen },
+    { label: "未读通知", value: unreadNotifications.length, detail: "截止、预算与审核", href: "/notifications", icon: Bell },
   ];
 
   if (isGuestView) {
@@ -191,6 +209,15 @@ export default async function Dashboard() {
             </Link>
           );
         })}
+      </section>
+
+      <section className="mt-6 border-y border-line/70 py-5" aria-labelledby="today-focus-heading">
+        <div className="mb-4 flex items-center justify-between"><h2 id="today-focus-heading" className="text-sm font-semibold text-ink">今日工作台</h2><Link href="/calendar" className="inline-flex items-center gap-1 text-xs text-accent">打开日历 <ArrowRight className="h-3.5 w-3.5" /></Link></div>
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div><p className="mb-2 flex items-center gap-2 text-[11px] text-ink-soft"><ListTodo className="h-3.5 w-3.5 text-red-500" />今日与逾期任务</p><div className="divide-y divide-line/70">{todayTasks.slice(0, 4).map((task) => <Link key={task.id} href={`/progress/${task.id}`} className="flex items-center justify-between gap-3 py-2.5"><span className="truncate text-xs font-medium text-ink">{task.title}</span><span className="shrink-0 text-[10px] text-ink-soft">{task.assignee}</span></Link>)}{todayTasks.length === 0 && <p className="py-4 text-xs text-ink-soft">今天没有到期任务。</p>}</div></div>
+          <div><p className="mb-2 flex items-center gap-2 text-[11px] text-ink-soft"><CalendarClock className="h-3.5 w-3.5 text-amber-500" />近期项目节点</p><div className="divide-y divide-line/70">{nearMilestones.map((item) => <Link key={item.id} href={`/projects/${item.projectId}?tab=schedule`} className="flex items-center justify-between gap-3 py-2.5"><span className="min-w-0"><span className="block truncate text-xs font-medium text-ink">{item.title}</span><span className="mt-0.5 block truncate text-[10px] text-ink-soft">{projectMap.get(item.projectId)}</span></span><span className="shrink-0 text-[10px] text-ink-soft">{formatDueDate(item.date)}</span></Link>)}{nearMilestones.length === 0 && <p className="py-4 text-xs text-ink-soft">近期没有项目节点。</p>}</div></div>
+          <div><p className="mb-2 flex items-center gap-2 text-[11px] text-ink-soft"><Send className="h-3.5 w-3.5 text-emerald-500" />待发布内容</p><div className="divide-y divide-line/70">{nextPublishes.map((item) => <Link key={item.id} href={`/projects/${item.projectId}?tab=publish`} className="flex items-center justify-between gap-3 py-2.5"><span className="min-w-0"><span className="block truncate text-xs font-medium text-ink">{item.title}</span><span className="mt-0.5 block truncate text-[10px] text-ink-soft">{projectMap.get(item.projectId)}</span></span><span className="shrink-0 text-[10px] text-ink-soft">{item.scheduledAt ? formatActivityTime(item.scheduledAt) : "待排期"}</span></Link>)}{nextPublishes.length === 0 && <p className="py-4 text-xs text-ink-soft">还没有待发布内容。</p>}</div></div>
+        </div>
       </section>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.75fr)]">

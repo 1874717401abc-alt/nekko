@@ -89,7 +89,7 @@ async function parseDocx(buffer: Buffer) {
   return trimText(result.value || "");
 }
 
-async function parseBuffer(input: {
+export async function extractTextFromBuffer(input: {
   buffer: Buffer;
   name: string;
   mimeType: string;
@@ -167,7 +167,7 @@ export async function extractAttachmentFromFile(file: File): Promise<AiAttachmen
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  const text = await parseBuffer({
+  const text = await extractTextFromBuffer({
     buffer,
     name: file.name || "未命名文件",
     mimeType: file.type || "application/octet-stream",
@@ -244,7 +244,7 @@ export async function extractAttachmentFromUrl(rawUrl: string): Promise<AiAttach
     const buffer = await readResponseBuffer(response);
     const pathnameName = decodeURIComponent(url.pathname.split("/").pop() || url.hostname);
     const name = pathnameName.includes(".") ? pathnameName : url.hostname;
-    const text = await parseBuffer({ buffer, name, mimeType });
+    const text = await extractTextFromBuffer({ buffer, name, mimeType });
 
     return {
       id: makeAttachmentId(),

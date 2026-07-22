@@ -7,7 +7,7 @@ import { ArrowUpRight, Search } from "lucide-react";
 
 export type SearchResult = {
   id: string;
-  type: "project" | "task" | "script" | "cost" | "milestone" | "inspiration" | "library" | "log" | "comment";
+  type: "project" | "task" | "script" | "cost" | "milestone" | "asset" | "publish" | "performance" | "inspiration" | "library" | "log" | "comment";
   label: string;
   title: string;
   summary?: string;
@@ -23,6 +23,9 @@ const typeOptions: { value: SearchResult["type"] | "all"; label: string }[] = [
   { value: "script", label: "脚本" },
   { value: "cost", label: "成本" },
   { value: "milestone", label: "排期" },
+  { value: "asset", label: "文件" },
+  { value: "publish", label: "发布" },
+  { value: "performance", label: "复盘" },
   { value: "inspiration", label: "灵感" },
   { value: "library", label: "资料" },
   { value: "log", label: "进度" },
@@ -58,7 +61,7 @@ export default function GlobalSearch({ results }: { results: SearchResult[] }) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           autoFocus
-          placeholder="搜索项目、脚本、成本、排期、任务或素材"
+          placeholder="搜索项目、脚本、文件、发布、复盘或任务"
           className="h-11 w-full rounded-md border border-line bg-paper pl-10 pr-4 text-sm text-ink outline-none transition-colors focus:border-accent"
         />
         </div>

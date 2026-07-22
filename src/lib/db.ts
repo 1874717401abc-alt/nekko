@@ -13,6 +13,13 @@ const RESOURCES = [
   "scripts",
   "costs",
   "milestones",
+  "scriptVersions",
+  "scriptReviews",
+  "assets",
+  "deliverables",
+  "performance",
+  "automations",
+  "notifications",
 ] as const;
 
 let db: Database.Database | null = null;

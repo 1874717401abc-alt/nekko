@@ -8,6 +8,8 @@ import {
   type ResourceItem,
 } from "@/lib/store";
 import { recordActivity } from "@/lib/activity";
+import { removeProjectAssetFile } from "@/lib/projectAssets";
+import { listAllDataItems } from "@/lib/store";
 
 function titleFromItem(item: ResourceItem) {
   for (const key of ["title", "name", "note", "memberName"]) {
@@ -63,6 +65,9 @@ export async function DELETE(
     return NextResponse.json({ error: "unknown resource" }, { status: 404 });
   }
 
+  const projectAssetFiles = resource === "projects"
+    ? listAllDataItems<ResourceItem>("assets").filter((item) => item.projectId === id).map((item) => item.storedName)
+    : [];
   const deleted =
     resource === "projects"
       ? hardDeleteProjectAndUnlink(id)
@@ -70,6 +75,9 @@ export async function DELETE(
   if (!deleted) {
     return NextResponse.json({ error: "记录不存在" }, { status: 404 });
   }
+
+  if (resource === "assets") await removeProjectAssetFile(deleted.storedName);
+  if (resource === "projects") await Promise.all(projectAssetFiles.map(removeProjectAssetFile));
 
   recordActivity({
     type: "purge",

@@ -1,0 +1,21 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { Bell, CheckCheck, CircleAlert, Trash2 } from "lucide-react";
+import { deleteItem, patchItem } from "@/lib/clientData";
+import type { NotificationItem } from "@/lib/types";
+
+const typeLabel: Record<NotificationItem["type"], string> = { deadline: "截止", budget: "预算", review: "审核", publish: "发布", automation: "自动化" };
+const typeColor: Record<NotificationItem["type"], string> = { deadline: "text-red-500", budget: "text-amber-600", review: "text-sky-600", publish: "text-emerald-600", automation: "text-accent" };
+
+export default function NotificationCenter({ initialItems }: { initialItems: NotificationItem[] }) {
+  const [items, setItems] = useState(initialItems);
+  const [filter, setFilter] = useState<"all" | "unread">("unread");
+  const [error, setError] = useState<string | null>(null);
+  const visible = items.filter((item) => filter === "all" || !item.readAt);
+  async function mark(item: NotificationItem) { try { const updated = await patchItem<NotificationItem>("notifications", item.id, { readAt: item.readAt ? "" : new Date().toISOString() }); setItems((current) => current.map((entry) => entry.id === item.id ? updated : entry)); } catch (err) { setError(err instanceof Error ? err.message : "通知更新失败。"); } }
+  async function markAll() { const unread = items.filter((item) => !item.readAt); try { const updated = await Promise.all(unread.map((item) => patchItem<NotificationItem>("notifications", item.id, { readAt: new Date().toISOString() }))); const map = new Map(updated.map((item) => [item.id, item])); setItems((current) => current.map((item) => map.get(item.id) ?? item)); } catch (err) { setError(err instanceof Error ? err.message : "通知更新失败。"); } }
+  async function remove(item: NotificationItem) { try { await deleteItem("notifications", item.id); setItems((current) => current.filter((entry) => entry.id !== item.id)); } catch (err) { setError(err instanceof Error ? err.message : "删除失败。"); } }
+  return <div><div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4"><div className="flex rounded-md border border-line bg-paper-soft p-1">{([['unread','未读'],['all','全部']] as const).map(([value, label]) => <button key={value} type="button" onClick={() => setFilter(value)} className={`rounded px-3 py-1.5 text-xs ${filter === value ? "bg-ink text-paper" : "text-ink-soft"}`}>{label}{value === "unread" ? ` ${items.filter((item) => !item.readAt).length}` : ""}</button>)}</div><button type="button" onClick={markAll} className="inline-flex h-9 items-center gap-2 rounded-md border border-line px-3 text-xs text-ink-soft hover:border-accent hover:text-accent"><CheckCheck className="h-4 w-4" />全部已读</button></div>{error && <p className="mb-4 text-xs text-red-500">{error}</p>}<div className="divide-y divide-line/70 border-y border-line/70">{visible.map((item) => <article key={item.id} className={`grid gap-3 py-4 sm:grid-cols-[30px_minmax(0,1fr)_auto] sm:items-start ${item.readAt ? "opacity-60" : ""}`}><button type="button" onClick={() => mark(item)} title={item.readAt ? "标为未读" : "标为已读"} aria-label={item.readAt ? "标为未读" : "标为已读"} className={`flex h-7 w-7 items-center justify-center rounded ${typeColor[item.type]}`}>{item.readAt ? <Bell className="h-4 w-4" /> : <CircleAlert className="h-4 w-4" />}</button><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><span className={`text-[10px] ${typeColor[item.type]}`}>{typeLabel[item.type]}</span>{item.href ? <Link href={item.href} className="text-sm font-medium text-ink hover:text-accent">{item.title}</Link> : <p className="text-sm font-medium text-ink">{item.title}</p>}</div><p className="mt-1 text-xs leading-5 text-ink-soft">{item.message}</p><p className="mt-1 text-[10px] text-ink-soft">{new Date(item.createdAt).toLocaleString("zh-CN")}</p></div><button type="button" onClick={() => remove(item)} title="删除通知" aria-label="删除通知" className="flex h-8 w-8 items-center justify-center rounded text-ink-soft hover:bg-red-500/10 hover:text-red-500"><Trash2 className="h-3.5 w-3.5" /></button></article>)}{visible.length === 0 && <div className="py-16 text-center"><Bell className="mx-auto h-5 w-5 text-ink-soft" /><p className="mt-3 text-xs text-ink-soft">没有需要处理的通知。</p></div>}</div></div>;
+}

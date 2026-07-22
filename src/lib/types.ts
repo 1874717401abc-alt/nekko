@@ -36,6 +36,10 @@ export type Project = {
   description?: string;
   tags: string[];
   budget?: number;
+  stage?: ProjectStage;
+  stageOwner?: string;
+  blockedReason?: string;
+  template?: ProjectTemplate;
   createdAt: string;
   createdBy: string;
   createdById?: string;
@@ -43,6 +47,19 @@ export type Project = {
   deletedBy?: string;
   deletedById?: string;
 };
+
+export type ProjectStage =
+  | "idea"
+  | "research"
+  | "script"
+  | "shooting"
+  | "editing"
+  | "review"
+  | "publishing"
+  | "published"
+  | "retrospective";
+
+export type ProjectTemplate = "blank" | "talking" | "interview" | "store" | "documentary";
 
 export type ScriptSceneType = "hook" | "narration" | "broll" | "interview" | "outro";
 export type ScriptSceneStatus = "draft" | "ready" | "shot";
@@ -96,6 +113,157 @@ export type ProjectMilestone = {
   status: MilestoneStatus;
   assignee?: string;
   note?: string;
+  createdAt: string;
+  createdBy: string;
+  createdById?: string;
+  deletedAt?: string;
+  deletedBy?: string;
+  deletedById?: string;
+};
+
+export type ScriptVersionStatus = "draft" | "in_review" | "approved" | "locked";
+
+export type ScriptVersion = {
+  id: string;
+  projectId: string;
+  sceneId: string;
+  version: number;
+  title: string;
+  script: string;
+  visual?: string;
+  duration: number;
+  status: ScriptVersionStatus;
+  note?: string;
+  createdAt: string;
+  createdBy: string;
+  createdById?: string;
+  deletedAt?: string;
+  deletedBy?: string;
+  deletedById?: string;
+};
+
+export type ScriptReview = {
+  id: string;
+  projectId: string;
+  sceneId: string;
+  versionId?: string;
+  content: string;
+  resolved: boolean;
+  createdAt: string;
+  createdBy: string;
+  createdById?: string;
+  deletedAt?: string;
+  deletedBy?: string;
+  deletedById?: string;
+};
+
+export type ProjectAssetKind =
+  | "image"
+  | "video"
+  | "document"
+  | "contract"
+  | "invoice"
+  | "other";
+
+export type ProjectAsset = {
+  id: string;
+  projectId: string;
+  title: string;
+  kind: ProjectAssetKind;
+  fileName: string;
+  storedName: string;
+  mimeType: string;
+  size: number;
+  url: string;
+  tags: string[];
+  version: number;
+  note?: string;
+  extractedText?: string;
+  createdAt: string;
+  createdBy: string;
+  createdById?: string;
+  deletedAt?: string;
+  deletedBy?: string;
+  deletedById?: string;
+};
+
+export type PublishPlatform = "bilibili" | "xiaohongshu" | "douyin" | "wechat" | "other";
+export type DeliverableStatus = "draft" | "scheduled" | "published";
+
+export type Deliverable = {
+  id: string;
+  projectId: string;
+  platform: PublishPlatform;
+  title: string;
+  caption?: string;
+  coverUrl?: string;
+  status: DeliverableStatus;
+  scheduledAt?: string;
+  publishedAt?: string;
+  url?: string;
+  createdAt: string;
+  createdBy: string;
+  createdById?: string;
+  deletedAt?: string;
+  deletedBy?: string;
+  deletedById?: string;
+};
+
+export type PerformanceRecord = {
+  id: string;
+  projectId: string;
+  deliverableId?: string;
+  recordedAt: string;
+  views: number;
+  likes: number;
+  comments: number;
+  saves: number;
+  shares: number;
+  followers: number;
+  completionRate: number;
+  revenue: number;
+  note?: string;
+  createdAt: string;
+  createdBy: string;
+  createdById?: string;
+  deletedAt?: string;
+  deletedBy?: string;
+  deletedById?: string;
+};
+
+export type AutomationAction = "content_radar" | "topic_digest" | "deadline_scan";
+export type AutomationCadence = "daily" | "weekly";
+
+export type AutomationRule = {
+  id: string;
+  title: string;
+  action: AutomationAction;
+  cadence: AutomationCadence;
+  time: string;
+  weekday?: number;
+  enabled: boolean;
+  lastRunAt?: string;
+  nextRunAt?: string;
+  createdAt: string;
+  createdBy: string;
+  createdById?: string;
+  deletedAt?: string;
+  deletedBy?: string;
+  deletedById?: string;
+};
+
+export type NotificationType = "deadline" | "budget" | "review" | "publish" | "automation";
+
+export type NotificationItem = {
+  id: string;
+  key?: string;
+  userId?: string;
+  projectId?: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  href?: string;
+  readAt?: string;
   createdAt: string;
   createdBy: string;
   createdById?: string;
@@ -215,7 +383,14 @@ export type TrashResource =
   | "checkins"
   | "scripts"
   | "costs"
-  | "milestones";
+  | "milestones"
+  | "scriptVersions"
+  | "scriptReviews"
+  | "assets"
+  | "deliverables"
+  | "performance"
+  | "automations"
+  | "notifications";
 
 export type TrashItem = {
   resource: TrashResource;

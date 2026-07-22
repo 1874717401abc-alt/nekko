@@ -12,6 +12,13 @@ export type ResourceName =
   | "scripts"
   | "costs"
   | "milestones"
+  | "scriptVersions"
+  | "scriptReviews"
+  | "assets"
+  | "deliverables"
+  | "performance"
+  | "automations"
+  | "notifications"
   | "activity";
 
 const ALLOWED: ResourceName[] = [
@@ -25,6 +32,13 @@ const ALLOWED: ResourceName[] = [
   "scripts",
   "costs",
   "milestones",
+  "scriptVersions",
+  "scriptReviews",
+  "assets",
+  "deliverables",
+  "performance",
+  "automations",
+  "notifications",
   "activity",
 ];
 
@@ -262,7 +276,17 @@ export function hardDeleteProjectAndUnlink(projectId: string): ResourceItem | nu
       }
     }
 
-    for (const resource of ["scripts", "costs", "milestones"] as ItemResourceName[]) {
+    for (const resource of [
+      "scripts",
+      "costs",
+      "milestones",
+      "scriptVersions",
+      "scriptReviews",
+      "assets",
+      "deliverables",
+      "performance",
+      "notifications",
+    ] as ItemResourceName[]) {
       const items = readResourceItems<ResourceItem>(resource);
       const next = items.filter((item) => item.projectId !== projectId);
       if (next.length !== items.length) {
@@ -305,6 +329,19 @@ function subtitleFromTrashItem(resource: ItemResourceName, item: ResourceItem): 
   if (resource === "milestones" && typeof item.date === "string") {
     return item.date;
   }
+  if (resource === "assets" && typeof item.fileName === "string") return item.fileName;
+  if (resource === "deliverables" && typeof item.platform === "string") return item.platform;
+  if (resource === "performance" && typeof item.views === "number") {
+    return `${item.views.toLocaleString("zh-CN")} 播放`;
+  }
+  if (resource === "scriptVersions" && typeof item.version === "number") {
+    return `版本 ${item.version}`;
+  }
+  if (resource === "scriptReviews" && typeof item.createdBy === "string") {
+    return item.createdBy;
+  }
+  if (resource === "automations" && typeof item.time === "string") return item.time;
+  if (resource === "notifications" && typeof item.type === "string") return item.type;
   return undefined;
 }
 
@@ -318,6 +355,13 @@ export function listTrashItems(): TrashItem[] {
     "scripts",
     "costs",
     "milestones",
+    "scriptVersions",
+    "scriptReviews",
+    "assets",
+    "deliverables",
+    "performance",
+    "automations",
+    "notifications",
   ];
   return resources
     .flatMap((resource) =>

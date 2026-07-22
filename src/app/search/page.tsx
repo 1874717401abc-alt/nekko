@@ -5,10 +5,13 @@ import { getCurrentUser } from "@/lib/auth";
 import { readData } from "@/lib/store";
 import type {
   CostItem,
+  Deliverable,
   InspirationItem,
   LibraryItem,
+  PerformanceRecord,
   ProgressTask,
   Project,
+  ProjectAsset,
   ProjectMilestone,
   ScriptScene,
 } from "@/lib/types";
@@ -20,7 +23,7 @@ function joinSearchText(parts: Array<string | string[] | undefined>) {
 }
 
 export default async function SearchPage() {
-  const [currentUser, projects, progress, inspiration, library, scripts, costs, milestones] = await Promise.all([
+  const [currentUser, projects, progress, inspiration, library, scripts, costs, milestones, assets, deliverables, performance] = await Promise.all([
     getCurrentUser(),
     readData<Project[]>("projects"),
     readData<ProgressTask[]>("progress"),
@@ -29,6 +32,9 @@ export default async function SearchPage() {
     readData<ScriptScene[]>("scripts"),
     readData<CostItem[]>("costs"),
     readData<ProjectMilestone[]>("milestones"),
+    readData<ProjectAsset[]>("assets"),
+    readData<Deliverable[]>("deliverables"),
+    readData<PerformanceRecord[]>("performance"),
   ]);
 
   if (!currentUser) {
@@ -116,6 +122,36 @@ export default async function SearchPage() {
       createdAt: item.createdAt,
       haystack: joinSearchText([item.title, item.date, item.assignee, item.note, item.status]),
     })),
+    ...assets.map((item) => ({
+      id: `asset-${item.id}`,
+      type: "asset" as const,
+      label: "文件",
+      title: item.title,
+      summary: `${item.fileName} · ${item.kind}`,
+      href: `/projects/${item.projectId}?tab=assets`,
+      createdAt: item.createdAt,
+      haystack: joinSearchText([item.title, item.fileName, item.tags, item.note, item.extractedText]),
+    })),
+    ...deliverables.map((item) => ({
+      id: `publish-${item.id}`,
+      type: "publish" as const,
+      label: "发布",
+      title: item.title,
+      summary: item.caption,
+      href: `/projects/${item.projectId}?tab=publish`,
+      createdAt: item.createdAt,
+      haystack: joinSearchText([item.title, item.caption, item.platform, item.status, item.url]),
+    })),
+    ...performance.map((item) => ({
+      id: `performance-${item.id}`,
+      type: "performance" as const,
+      label: "复盘",
+      title: `${item.recordedAt} · ${item.views.toLocaleString("zh-CN")} 播放`,
+      summary: item.note,
+      href: `/projects/${item.projectId}?tab=analytics`,
+      createdAt: item.createdAt,
+      haystack: joinSearchText([item.recordedAt, item.note, String(item.views), String(item.followers), String(item.revenue)]),
+    })),
     ...inspiration.map((item) => ({
       id: `inspiration-${item.id}`,
       type: "inspiration" as const,
@@ -143,7 +179,7 @@ export default async function SearchPage() {
       <PageHeader
         eyebrow="Search"
         title="全局搜索"
-        description="快速查找项目、脚本镜头、成本、排期、任务和素材。"
+        description="快速查找项目、脚本、文件、成本、发布记录、复盘数据与任务。"
       />
       <GlobalSearch results={results} />
     </div>

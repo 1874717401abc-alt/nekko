@@ -2,12 +2,27 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Plus, Search, Trash2 } from "lucide-react";
 import { createItem, deleteItem } from "@/lib/clientData";
-import type { CostItem, InspirationItem, LibraryItem, Project, ProjectMilestone, ProgressTask, ScriptScene } from "@/lib/types";
+import type { CostItem, InspirationItem, LibraryItem, Project, ProjectMilestone, ProjectTemplate, ProgressTask, ScriptScene } from "@/lib/types";
 
 const easeOut = [0.22, 1, 0.36, 1] as const;
+
+const templates: { value: ProjectTemplate; label: string; description: string; scenes: { title: string; type: ScriptScene["type"]; duration: number }[]; milestones: string[] }[] = [
+  { value: "blank", label: "空白", description: "只创建项目", scenes: [], milestones: [] },
+  { value: "talking", label: "口播", description: "钩子、正文、收尾", scenes: [{ title: "开场钩子", type: "hook", duration: 5 }, { title: "核心观点", type: "narration", duration: 45 }, { title: "行动引导", type: "outro", duration: 8 }], milestones: ["脚本定稿", "拍摄完成", "成片审核", "正式发布"] },
+  { value: "interview", label: "访谈", description: "提纲、采访、补充画面", scenes: [{ title: "人物开场", type: "hook", duration: 8 }, { title: "核心访谈", type: "interview", duration: 120 }, { title: "环境与细节", type: "broll", duration: 30 }, { title: "人物收尾", type: "outro", duration: 12 }], milestones: ["采访提纲确认", "录制完成", "粗剪审核", "正式发布"] },
+  { value: "store", label: "探店", description: "环境、体验、推荐", scenes: [{ title: "门店反差钩子", type: "hook", duration: 6 }, { title: "环境空镜", type: "broll", duration: 18 }, { title: "体验与讲解", type: "narration", duration: 50 }, { title: "价格与推荐", type: "outro", duration: 16 }], milestones: ["踩点完成", "现场拍摄", "商家审核", "发布上线"] },
+  { value: "documentary", label: "纪录", description: "调研、故事线、长内容", scenes: [{ title: "故事引子", type: "hook", duration: 15 }, { title: "背景与人物", type: "narration", duration: 60 }, { title: "现场跟拍", type: "broll", duration: 120 }, { title: "深度访谈", type: "interview", duration: 180 }, { title: "结尾回响", type: "outro", duration: 25 }], milestones: ["资料调研", "故事线确认", "主体拍摄", "补拍完成", "成片审核", "正式发布"] },
+];
+
+function dayFromNow(offset: number) {
+  const date = new Date();
+  date.setDate(date.getDate() + offset);
+  return date.toISOString().slice(0, 10);
+}
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("zh-CN", {
@@ -34,6 +49,7 @@ export default function ProjectsBoard({
   costs: CostItem[];
   milestones: ProjectMilestone[];
 }) {
+  const router = useRouter();
   const [projects, setProjects] = useState<Project[]>(initialProjects);
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,12 +64,14 @@ export default function ProjectsBoard({
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState("");
   const [budget, setBudget] = useState("");
+  const [template, setTemplate] = useState<ProjectTemplate>("blank");
 
   function resetForm() {
     setName("");
     setDescription("");
     setTags("");
     setBudget("");
+    setTemplate("blank");
     setShowForm(false);
   }
 
@@ -72,8 +90,17 @@ export default function ProjectsBoard({
           .map((t) => t.trim())
           .filter(Boolean),
         budget: Number(budget) || 0,
+        template,
+        stage: "idea",
       });
+      const selectedTemplate = templates.find((item) => item.value === template) ?? templates[0];
+      await Promise.all([
+        ...selectedTemplate.scenes.map((scene, index) => createItem<ScriptScene>("scripts", { projectId: newProject.id, ...scene, order: index, script: "", status: "draft" })),
+        ...selectedTemplate.milestones.map((title, index) => createItem<ProjectMilestone>("milestones", { projectId: newProject.id, title, date: dayFromNow((index + 1) * 3), status: "planned" })),
+        ...(template === "blank" ? [] : [createItem<ProgressTask>("progress", { projectId: newProject.id, title: "确认选题目标与受众", assignee: "未分配", priority: "high", dueDate: dayFromNow(1), status: "todo" })]),
+      ]);
       setProjects((current) => [newProject, ...current]);
+      router.refresh();
       resetForm();
     } catch (err) {
       setError(err instanceof Error ? err.message : "保存失败，请重试。");
@@ -180,6 +207,12 @@ export default function ProjectsBoard({
             transition={{ duration: 0.35, ease: easeOut }}
             className="mb-6 grid grid-cols-1 gap-4 overflow-hidden rounded-lg border border-line bg-card p-5 sm:grid-cols-2"
           >
+            <div className="sm:col-span-2">
+              <label className="mb-2 block text-xs text-ink-soft">项目模板</label>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+                {templates.map((item) => <button key={item.value} type="button" onClick={() => setTemplate(item.value)} className={`min-h-16 rounded-md border p-2.5 text-left ${template === item.value ? "border-accent bg-accent/5" : "border-line bg-paper"}`}><span className={`block text-xs font-medium ${template === item.value ? "text-accent" : "text-ink"}`}>{item.label}</span><span className="mt-1 block text-[10px] leading-4 text-ink-soft">{item.description}</span></button>)}
+              </div>
+            </div>
             <div className="sm:col-span-2">
               <label className="block text-xs  text-ink-soft mb-1.5">
                 项目名称

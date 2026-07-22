@@ -6,6 +6,8 @@ import { usePathname } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
 import {
   Bot,
+  Bell,
+  CalendarDays,
   CheckCircle2,
   Clapperboard,
   FolderOpen,
@@ -15,6 +17,7 @@ import {
   Lightbulb,
   LogIn,
   Menu,
+  Workflow,
   Search,
   ShieldCheck,
   UserRound,
@@ -37,6 +40,9 @@ const navGroups: { label: string; items: NavItem[] }[] = [
     items: [
       { href: "/", label: "主页", icon: Home },
       { href: "/agent", label: "AI 工作台", icon: Bot },
+      { href: "/automations", label: "自动化", icon: Workflow },
+      { href: "/calendar", label: "日历", icon: CalendarDays },
+      { href: "/notifications", label: "通知", icon: Bell },
     ],
   },
   {

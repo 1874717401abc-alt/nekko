@@ -24,6 +24,11 @@ export type WorkspaceAgentActionName =
   | "create_script_scene"
   | "create_cost"
   | "create_milestone"
+  | "create_deliverable"
+  | "record_performance"
+  | "create_automation"
+  | "create_script_review"
+  | "update_project_stage"
   | "run_content_radar"
   | "normalize_inspiration_tags"
   | "organize_inspirations";
@@ -63,6 +68,11 @@ const ACTIONS = new Set<WorkspaceAgentActionName>([
   "create_script_scene",
   "create_cost",
   "create_milestone",
+  "create_deliverable",
+  "record_performance",
+  "create_automation",
+  "create_script_review",
+  "update_project_stage",
   "run_content_radar",
   "normalize_inspiration_tags",
   "organize_inspirations",
@@ -112,6 +122,11 @@ export function workspaceActionLabel(action: WorkspaceAgentActionName | string) 
     create_script_scene: "创建脚本镜头",
     create_cost: "登记项目成本",
     create_milestone: "创建项目里程碑",
+    create_deliverable: "创建发布版本",
+    record_performance: "记录复盘数据",
+    create_automation: "创建自动化",
+    create_script_review: "添加脚本审阅",
+    update_project_stage: "更新项目阶段",
     run_content_radar: "运行内容雷达",
     normalize_inspiration_tags: "整理灵感标签",
     organize_inspirations: "智能整理灵感",
@@ -146,6 +161,10 @@ function resourceForAction(action: WorkspaceAgentActionName): ItemResourceName |
   if (action === "create_script_scene") return "scripts";
   if (action === "create_cost") return "costs";
   if (action === "create_milestone") return "milestones";
+  if (action === "create_deliverable") return "deliverables";
+  if (action === "record_performance") return "performance";
+  if (action === "create_automation") return "automations";
+  if (action === "create_script_review") return "scriptReviews";
   return null;
 }
 
@@ -187,6 +206,10 @@ function normalizeActionData(
     action === "create_script_scene" ||
     action === "create_cost" ||
     action === "create_milestone"
+    || action === "create_deliverable"
+    || action === "record_performance"
+    || action === "create_script_review"
+    || action === "update_project_stage"
   ) {
     return {
       ...data,
@@ -209,6 +232,11 @@ function actionInstruction() {
     "- create_script_scene: data = { title, type?, duration?, script?, visual?, assignee?, status?, order?, projectId?, projectName?, projectRef? }，type 为 hook/narration/broll/interview/outro。",
     "- create_cost: data = { title, category?, amount, status?, vendor?, date?, note?, projectId?, projectName?, projectRef? }，status 为 planned/approved/paid。",
     "- create_milestone: data = { title, date, status?, assignee?, note?, projectId?, projectName?, projectRef? }，status 为 planned/doing/done。",
+    "- create_deliverable: data = { title, platform?, caption?, coverUrl?, status?, scheduledAt?, url?, projectId?, projectName?, projectRef? }，platform 为 bilibili/xiaohongshu/douyin/wechat/other。",
+    "- record_performance: data = { recordedAt, deliverableId?, views?, likes?, comments?, saves?, shares?, followers?, completionRate?, revenue?, note?, projectId?, projectName?, projectRef? }。",
+    "- create_automation: data = { title, action, cadence, time, weekday?, enabled?, nextRunAt? }，action 为 content_radar/topic_digest/deadline_scan，cadence 为 daily/weekly。",
+    "- create_script_review: data = { sceneId, versionId?, content, projectId?, projectName?, projectRef? }。",
+    "- update_project_stage: data = { stage, stageOwner?, blockedReason?, projectId?, projectName?, projectRef? }，stage 为 idea/research/script/shooting/editing/review/publishing/published/retrospective。",
     "- run_content_radar: data = { limit? }，用于用户要求采集/扒 B站/生成今日趋势灵感。",
     "- normalize_inspiration_tags: data = { scope?, tags? }，用于用户要求整理灵感标签、清理内容雷达标签、B站趋势标签太多。scope 可为 ai_radar、bilibili、all；默认 ai_radar。tags 默认 [\"AI选题\", \"B站热门\"]。",
     "- organize_inspirations: data = { scope? }，用于用户要求整理、归类、清理整个灵感库。scope 可为 all、recent、bilibili；默认 all。它会统一主题标签并标记疑似重复，但不会删除原内容。",
@@ -229,7 +257,7 @@ export function shouldPlanWorkspaceActions(message: string) {
   if (!normalized) return false;
 
   const patterns = [
-    /(?:新建|创建|建立|添加|记录|保存|存入|放进|加入|登记).{0,24}(?:项目|任务|灵感|资料|脚本|镜头|成本|费用|预算|里程碑|排期|工作台|灵感库|资料库)/i,
+    /(?:新建|创建|建立|添加|记录|保存|存入|放进|加入|登记).{0,24}(?:项目|任务|灵感|资料|脚本|镜头|成本|费用|预算|里程碑|排期|发布|复盘|自动化|审阅|工作台|灵感库|资料库)/i,
     /(?:项目|任务|灵感|资料|脚本|镜头|成本|费用|预算|里程碑|排期|工作台|灵感库|资料库).{0,24}(?:新建|创建|添加|记录|保存|整理|归类|清理|统一|拆分|安排|登记)/i,
     /(?:整理|归类|清理|统一).{0,16}(?:灵感|标签|灵感库)/i,
     /(?:采集|抓取|扒|生成).{0,18}(?:B站|b站|哔哩|热门|趋势|今日).{0,20}(?:选题|灵感)/i,
@@ -310,6 +338,20 @@ export async function executeWorkspaceAction(input: {
       detail: `已整理 ${result.processed} 条灵感，归入 ${result.groups} 个主题，标记 ${result.duplicates} 条疑似重复；原内容均已保留。`,
       resource: "inspiration",
     };
+  }
+
+  if (name === "update_project_stage") {
+    const projects = listDataItems<Project>("projects");
+    const rawData = input.action.data && typeof input.action.data === "object" ? input.action.data : {};
+    const projectId = resolveProjectId(rawData, input.projectRefs, projects);
+    const project = projects.find((item) => item.id === projectId);
+    const stages = ["idea", "research", "script", "shooting", "editing", "review", "publishing", "published", "retrospective"];
+    const stage = text(rawData.stage);
+    if (!project || !stages.includes(stage)) return { action: name, ok: false, title: "更新项目阶段", detail: !project ? "没有找到对应项目。" : "项目阶段不正确。", resource: "projects" };
+    const updated = updateDataItem<Project>("projects", project.id, (item) => ({ ...item, stage: stage as Project["stage"], stageOwner: text(rawData.stageOwner) || item.stageOwner, blockedReason: "blockedReason" in rawData ? text(rawData.blockedReason) || undefined : item.blockedReason }));
+    if (!updated) return { action: name, ok: false, title: project.name, detail: "项目更新失败。", resource: "projects" };
+    recordItemActivity("update", "projects", updated, input.user);
+    return { action: name, ok: true, title: project.name, detail: `已更新项目阶段「${project.name}」`, resource: "projects", resourceId: project.id };
   }
 
   const resource = resourceForAction(name);
