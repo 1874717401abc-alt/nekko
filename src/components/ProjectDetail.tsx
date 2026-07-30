@@ -159,11 +159,14 @@ export default function ProjectDetail({
   const [quickTags, setQuickTags] = useState("");
   const [quickSaving, setQuickSaving] = useState(false);
   const [briefStatus, setBriefStatus] = useState("导出简报");
+  const [liveScripts, setLiveScripts] = useState(() =>
+    scripts.filter((item) => item.projectId === project.id)
+  );
 
   const myInspiration = inspiration.filter((item) => item.projectId === project.id);
   const myLibrary = library.filter((item) => item.projectId === project.id);
   const myProgress = progress.filter((item) => item.projectId === project.id);
-  const myScripts = scripts.filter((item) => item.projectId === project.id);
+  const myScripts = liveScripts;
   const myCosts = costs.filter((item) => item.projectId === project.id);
   const myMilestones = milestones.filter((item) => item.projectId === project.id);
   const myScriptVersions = scriptVersions.filter((item) => item.projectId === project.id);
@@ -503,7 +506,7 @@ export default function ProjectDetail({
         </div>
       )}
 
-      {activeTab === "script" && <><ProjectScriptBoard projectId={project.id} initialScenes={myScripts} /><ProjectScriptReview projectId={project.id} scenes={myScripts} initialVersions={myScriptVersions} initialReviews={myScriptReviews} /></>}
+      {activeTab === "script" && <><ProjectScriptBoard projectId={project.id} initialScenes={myScripts} onScenesChange={setLiveScripts} /><ProjectScriptReview projectId={project.id} scenes={myScripts} initialVersions={myScriptVersions} initialReviews={myScriptReviews} /></>}
       {activeTab === "costs" && <ProjectCostLedger project={project} initialCosts={myCosts} />}
       {activeTab === "schedule" && <ProjectSchedule projectId={project.id} initialMilestones={myMilestones} tasks={myProgress} />}
       {activeTab === "assets" && <ProjectAssets projectId={project.id} initialAssets={myAssets} inspiration={myInspiration} library={myLibrary} />}

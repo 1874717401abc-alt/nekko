@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, ChevronUp, Clock3, Edit3, Plus, Trash2 } from "lucide-react";
 import { createItem, deleteItem, patchItem } from "@/lib/clientData";
 import type { ScriptScene, ScriptSceneStatus, ScriptSceneType } from "@/lib/types";
@@ -56,9 +56,11 @@ const emptyForm: SceneForm = {
 export default function ProjectScriptBoard({
   projectId,
   initialScenes,
+  onScenesChange,
 }: {
   projectId: string;
   initialScenes: ScriptScene[];
+  onScenesChange?: (scenes: ScriptScene[]) => void;
 }) {
   const [scenes, setScenes] = useState(initialScenes);
   const [form, setForm] = useState<SceneForm>(emptyForm);
@@ -66,6 +68,37 @@ export default function ProjectScriptBoard({
   const [showForm, setShowForm] = useState(initialScenes.length === 0);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const mutatingRef = useRef(false);
+
+  const syncTeamScenes = useCallback(async () => {
+    if (mutatingRef.current) return;
+    try {
+      const response = await fetch("/api/data/scripts", { cache: "no-store" });
+      if (!response.ok) return;
+      const data: unknown = await response.json();
+      if (!Array.isArray(data)) return;
+      const next = (data as ScriptScene[]).filter((scene) => scene.projectId === projectId);
+      if (JSON.stringify(scenes) === JSON.stringify(next)) return;
+      setScenes(next);
+      onScenesChange?.(next);
+    } catch {
+      // Keep the current timeline during brief network interruptions.
+    }
+  }, [onScenesChange, projectId, scenes]);
+
+  useEffect(() => {
+    const syncWhenVisible = () => {
+      if (document.visibilityState === "visible") void syncTeamScenes();
+    };
+    const interval = window.setInterval(syncWhenVisible, 8_000);
+    window.addEventListener("focus", syncWhenVisible);
+    document.addEventListener("visibilitychange", syncWhenVisible);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", syncWhenVisible);
+      document.removeEventListener("visibilitychange", syncWhenVisible);
+    };
+  }, [syncTeamScenes]);
 
   const sorted = useMemo(
     () => [...scenes].sort((a, b) => a.order - b.order || a.createdAt.localeCompare(b.createdAt)),
@@ -121,17 +154,23 @@ export default function ProjectScriptBoard({
         : Math.max(-1, ...scenes.map((scene) => scene.order)) + 1,
     };
     try {
+      mutatingRef.current = true;
       if (editingId) {
         const updated = await patchItem<ScriptScene>("scripts", editingId, payload);
-        setScenes((current) => current.map((scene) => (scene.id === editingId ? updated : scene)));
+        const next = scenes.map((scene) => (scene.id === editingId ? updated : scene));
+        setScenes(next);
+        onScenesChange?.(next);
       } else {
         const created = await createItem<ScriptScene>("scripts", payload);
-        setScenes((current) => [...current, created]);
+        const next = [...scenes, created];
+        setScenes(next);
+        onScenesChange?.(next);
       }
       resetForm();
     } catch (err) {
       setError(err instanceof Error ? err.message : "脚本保存失败。");
     } finally {
+      mutatingRef.current = false;
       setPending(false);
     }
   }
@@ -140,11 +179,16 @@ export default function ProjectScriptBoard({
     if (!window.confirm(`删除镜头「${scene.title}」？`)) return;
     setError(null);
     try {
+      mutatingRef.current = true;
       await deleteItem("scripts", scene.id);
-      setScenes((current) => current.filter((item) => item.id !== scene.id));
+      const next = scenes.filter((item) => item.id !== scene.id);
+      setScenes(next);
+      onScenesChange?.(next);
       if (editingId === scene.id) resetForm();
     } catch (err) {
       setError(err instanceof Error ? err.message : "删除失败。");
+    } finally {
+      mutatingRef.current = false;
     }
   }
 
@@ -155,17 +199,20 @@ export default function ProjectScriptBoard({
     const target = sorted[targetIndex];
     setError(null);
     try {
+      mutatingRef.current = true;
       const [nextCurrent, nextTarget] = await Promise.all([
         patchItem<ScriptScene>("scripts", current.id, { order: target.order }),
         patchItem<ScriptScene>("scripts", target.id, { order: current.order }),
       ]);
-      setScenes((items) =>
-        items.map((item) =>
-          item.id === nextCurrent.id ? nextCurrent : item.id === nextTarget.id ? nextTarget : item
-        )
+      const next = scenes.map((item) =>
+        item.id === nextCurrent.id ? nextCurrent : item.id === nextTarget.id ? nextTarget : item
       );
+      setScenes(next);
+      onScenesChange?.(next);
     } catch (err) {
       setError(err instanceof Error ? err.message : "排序失败。");
+    } finally {
+      mutatingRef.current = false;
     }
   }
 
